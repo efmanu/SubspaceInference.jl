@@ -12,8 +12,8 @@ This work is implemented by referring the folloing publication:
 *Izmailov, P., Maddox, W. J., Kirichenko, P., Garipov, T., Vetrov, D., & Wilson, A. G. (2020, August). Subspace
   inference for Bayesian deep learning. In Uncertainty in Artificial Intelligence (pp. 1169-1179). PMLR.*
 
-
-## Input Arguments
+## Subspace Construction
+### Input Arguments
 - `model` : Machine learning model. Eg: Chain(Dense(10,2)). Model should be created with Chain in Flux
 - `shape` : Shape of the neural network layer. Eg: shape =[((2,10),2)] based on above model. The type of shape should be Array{Tuple{Tuple{Int64,Int64},Int64},1}
 - `cost` : Cost function. Eg: L(x, y) = Flux.Losses.mse(m(x), y)
@@ -21,18 +21,18 @@ This work is implemented by referring the folloing publication:
 - `opt`	: Optimzer. Eg: opt = ADAM(0.1)
 - `callback` : Callback function during training. Eg: callback() = @show(L(X,Y))
 
-## Keyword Arguments
+### Keyword Arguments
 - `T` : Number of steps for subspace calculation. Eg: T= 1
 - `c` : Moment update frequency. Eg: c = 1
 - `M` : Maximum number of columns in deviation matrix. Eg: M= 2
 - `svd_len`: Number of columns in right singukar vectors during SVD. Eg; svd_len = 1
 
-## Outputs
+### Outputs
 - `W_swa`: Mean weights
 - `P` : Projection Matrix
 
 
-## Example
+### Example
 ```julia
 using SubspaceInference
 using Flux
