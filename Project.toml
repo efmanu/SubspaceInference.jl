@@ -1,0 +1,4 @@
+name = "SubspaceInference"
+uuid = "706446a6-0e85-4c47-b731-c658bbb72625"
+authors = ["efmanu <manuedavakandam@gmail.com>"]
+version = "0.1.0"
