@@ -1,4 +1,4 @@
-#Subspace Inference for Bayesian Deep Learning
+# Subspace Inference for Bayesian Deep Learning
 
 This package aims to generate the subspace and subspace inferences.
 
