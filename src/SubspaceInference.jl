@@ -98,12 +98,15 @@ To generate the uncertainty in machine learing models using subspace inference m
 - `svd_len`	: Number of columns in right singukar vectors during SVD. Eg; svd_len = 1
 
 # Output
+
+- `W_swa`	: Mean weights
+- `P`		: Subspace
 - `chn`		: Chain with samples with uncertainty informations
 """
 function subspace_inference(model, cost, data, opt, callback; itr =1000, T=10, c=1, M=3, svd_len=1)
 	#create subspace P
 	W_swa, P, re = subspace_construction(model, cost, data, opt, callback)
-	chn = inference(data, W_swa, re, P, itr)
+	W_swa, P, chn = inference(data, W_swa, re, P, itr)
 end
 function inference(data, W_swa, re, P, itr)
 	M = length(P)	
