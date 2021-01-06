@@ -9,19 +9,17 @@ using Flux: @epochs
 using LinearAlgebra
 using TSVD
 using Turing
+using Distributions
+using LazyArrays
+using DistributionsAD
 
 ###########
 # Exports #
 ###########
-export  subspace_construction
+export  subspace_construction,subspace_inference
 
-function extract_weights(model, shape)
-	all_W = Array{Float64}(undef,0)
-	for i in 1:length(shape)
-		append!(all_W, model[i].W)
-		append!(all_W, model[i].b)
-	end
-	return all_W
+function extract_weights(model)
+	return Flux.destructure(model)
 end
 
 """
@@ -35,7 +33,7 @@ To construct subspace from pretrained weights.
 - `model` : Machine learning model. Eg: Chain(Dense(10,2)). Model should be created with Chain in Flux
 - `shape` : Shape of the neural network layer. Eg: shape =[((2,10),2)] based on above model. The type of shape should be Array{Tuple{Tuple{Int64,Int64},Int64},1}
 - `cost` : Cost function. Eg: L(x, y) = Flux.Losses.mse(m(x), y)
-- `data` : Inputs and outputs. Eg:	X = rand(10); Y = rand(2); data = Iterators.repeated((X,Y),100);
+- `data` : Inputs and outputs. Eg:	X = rand(10,100); Y = rand(2,100); data = DataLoader(X,Y);
 - `opt`	: Optimzer. Eg: opt = ADAM(0.1)
 - `callback` : Callback function during training. Eg: callback() = @show(L(X,Y))
 
@@ -51,10 +49,10 @@ To construct subspace from pretrained weights.
 
 
 """
-function subspace_construction(model, shape, cost, data, opt, callback;T = 10, c = 1, M = 2, svd_len = 1)
+function subspace_construction(model, cost, data, opt, callback;T = 10, c = 1, M = 3, svd_len = 1)
 	m_swa = model #mean model
 
-	W_swa = extract_weights(m_swa, shape);
+	W_swa, re = extract_weights(m_swa);
 	all_len = length(W_swa)
 
 	A = Array{Float64}(undef,0) #initialize deviation matrix
@@ -62,7 +60,7 @@ function subspace_construction(model, shape, cost, data, opt, callback;T = 10, c
 	# #initaize weights with mean
 	for i in 1:T
 		Flux.train!(cost, ps, data, opt, cb = () -> callback())
-		W = extract_weights(model, shape)
+		(W, r1) = extract_weights(model)
 
 		if mod(i,c) == 0
 			n = i/c
@@ -78,54 +76,63 @@ function subspace_construction(model, shape, cost, data, opt, callback;T = 10, c
 	col_a = Int(floor(length(A)/all_len))
 	A = reshape(A, all_len, col_a)
 	U,s,V = TSVD.tsvd(A,svd_len)
-	P = LinearAlgebra.Diagonal(s)*V'
-	return W_swa, P
+	P = U*LinearAlgebra.Diagonal(s)
+	return W_swa, P, re
 end
 
-function subspace_inference(data, model)
+"""
+    subspace_inference(model, cost, data, opt, callback; itr =1000, T=10, c=1, M=3, svd_len=1)
+To generate the uncertainty in machine learing models using subspace inference method
+
+# Input Arguments
+- `model`	: Machine learning model. Eg: Chain(Dense(10,2)). Model should be created with Chain in Flux
+- `cost`	: Cost function. Eg: L(x, y) = Flux.Losses.mse(m(x), y)
+- `data`	: Inputs and outputs. Eg:	X = rand(10,100); Y = rand(2,100); data = DataLoader(X,Y);
+- `opt`		: Optimzer. Eg: opt = ADAM(0.1)
+- `callback`: Callback function during training. Eg: callback() = @show(L(X,Y))	
+# Keyword Arguments
+- `itr`		: Iterations for sampling
+- `T`		: Number of steps for subspace calculation. Eg: T= 1
+- `c`		: Moment update frequency. Eg: c = 1
+- `M`		: Maximum number of columns in deviation matrix. Eg: M= 2
+- `svd_len`	: Number of columns in right singukar vectors during SVD. Eg; svd_len = 1
+
+# Output
+- `chn`		: Chain with samples with uncertainty informations
+"""
+function subspace_inference(model, cost, data, opt, callback; itr =1000, T=10, c=1, M=3, svd_len=1)
 	#create subspace P
-	args = (model, shape, cost, data, opt, callback, T, c, M, svd_len)
-	w_cap, P = subspace_construction(args...)
-	@model function infer(w_cap, P, model_shape, in_data, out_data)
+	W_swa, P, re = subspace_construction(model, cost, data, opt, callback)
+	chn = inference(data, W_swa, re, P, itr)
+end
+function inference(data, W_swa, re, P, itr)
+	M = length(P)	
+	(in_data, out_data) = split_data(data)
+	@model infer(W_swa, P, re, in_data, out_data, M,::Type{T}=Float64) where {T} = begin
 		#prior Z
-		z ~ Normal(0.0,1.0)
-		w_til = w_cap + P*z
+		z ~ filldist(Uniform(0.0, 1.0), M)
+		W_til = W_swa + P.*z
 
-		pred = ai_model(w_til, data, model_shape, in_data)
+		pred = predict_out(W_til, re, in_data)
 
-		for n in 1:length(out_data)
-		    # Heads or tails of a coin are drawn from a Bernoulli distribution.
-		    pred[i] ~ Normal(pred[i], 0.1)
-		end
+		obs = DistributionsAD.lazyarray(Normal, copy(pred), 1.0)
+		out_data ~ arraydist(obs)
 	end
 
-	model = infer(w_cap, P)
-	chn = sample(model, NUTS(0.65), iterations)
-
+	model = infer(W_swa, P, re, in_data, out_data, M)
+	chn = sample(model, NUTS(0.65), itr)
+	return chn
 end
 
-function generate_model(w_til, shape)
-	layers = Array{Any,1}(undef,0)
-	for i in 1:length(shape)
-		current_len = sum(shape[i][1])+sum(shape[i][2])
-		prev_len = 1
-		if i != 1
-			prev_len = sum(shape[i-1][1])+sum(shape[i-1][2])
-		w = w_til(prev_len:current_len)
-
-		w = w_til(shape[i][sum(shape[i][1])])
-		append!(all_W, model[i].W)
-		append!(all_W, model[i].b)
-		append!(layers, [Dense(rand(2,2),rand(2))])
-
-	end
-	flux_model(x) = foldl((x,m) -> m(x), layers, init =x)
-
-	return flux_model
+function split_data(data)
+	return data.data[1], data.data[2]
 end
 
-function ai_model(w_til, data, model_shape, in_data)
+generate_model(w_til, re) = re(w_til)
 
-	return pred
+
+function predict_out(w_til, re, in_data)
+	new_model = generate_model(w_til, re)
+	return new_model(in_data)
 end
 end # module
