@@ -167,6 +167,7 @@ end
 
 function pretrain(epochs, L, ps, data, opt; print_freq = 1000, lr_init = 1e-2, swag_start = epochs, cyclic_lr = false)
 	local training_loss
+	local new_lr = lr_init
 	for ep in 1:epochs
 		if cyclic_lr
 			new_lr = cyclic_LR(ep, epochs, lr_init=lr_init, swag_start = swag_start)
@@ -178,11 +179,10 @@ function pretrain(epochs, L, ps, data, opt; print_freq = 1000, lr_init = 1e-2, s
 				return training_loss
 		    end
 		    Flux.update!(opt, ps, gs)
-		    # if (mod(ep,print_freq) == 0) || (ep == epochs - 1)
-		    # 	@show ep new_lr training_loss
-		    # end
-		    @show ep new_lr training_loss
-		end		
+		end	
+		if (mod(ep,print_freq) == 0 )|| (ep == epochs - 1)
+			println("epochs: ",ep," LR: ",new_lr, " Loss: ",training_loss)
+	    end	
 		
 	end
 	return ps
