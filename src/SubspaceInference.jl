@@ -129,27 +129,35 @@ To generate the uncertainty in machine learing models using subspace inference m
 - `P`		: Subspace
 - `chn`		: Chain with samples with uncertainty informations
 """
-function subspace_inference(model, cost, data, opt; callback =()->(return 0), itr =1000, T=10, c=1, M=3)
+function subspace_inference(model, cost, data, opt; callback =()->(return 0),
+	prior_dist = Normal(0.0,10.0), σ_l = 10.0, alg = NUTS(0.65),
+	itr =1000, T=10, c=1, M=3)
 	#create subspace P
 	W_swa, P, re = subspace_construction(model, cost, data, opt, M=M, T=T)
-	chn = inference(data, W_swa, re, P, itr, M)
+	chn = inference(data, W_swa, re, P, itr = itr, M = M, prior_dist = prior_dist,
+	alg = alg, σ_l = σ_l)
 	return W_swa, P, chn
 end
-function inference(data, W_swa, re, P, itr, M)
+function inference(data, W_swa, re, P;
+    alg = NUTS(0.65), prior_dist = Normal(0.0,10.0),
+     σ_l = 10.0, itr=100, M = 3)
+
 	(in_data, out_data) = split_data(data)
-	@model infer(W_swa, P, re, in_data, out_data, M,::Type{T}=Float64) where {T} = begin
+	@model infer(W_swa, P, re, in_data, out_data, M,
+		prior_dist, σ_l,
+		::Type{T}=Float64) where {T} = begin
 		#prior Z
-		z ~ filldist(Uniform(0.0, 10.0), M)
+		z ~ filldist(prior_dist, M)
 		W_til = W_swa + P*z
 
 		pred = predict_out(W_til, re, in_data)
 
-		obs = DistributionsAD.lazyarray(Normal, copy(pred), 10.0)
+		obs = DistributionsAD.lazyarray(Normal, copy(pred), σ_l)
 		out_data ~ arraydist(obs)
 	end
 
-	model = infer(W_swa, P, re, in_data, out_data, M)
-	chn = sample(model, NUTS(0.65), itr)
+	model = infer(W_swa, P, re, in_data, out_data, M, prior_dist, σ_l)
+	chn = sample(model, alg, itr)
 	return chn
 end
 
@@ -165,12 +173,13 @@ function predict_out(w_til, re, in_data)
 	return new_model(in_data)
 end
 
-function pretrain(epochs, L, ps, data, opt; print_freq = 1000, lr_init = 1e-2, swag_start = epochs, cyclic_lr = false)
-	local training_loss
-	local new_lr = lr_init
+function pretrain(epochs, L, ps, data, opt; print_freq = 1000, lr_init = 1e-2, 
+	cyclic_lr = false)
+	training_loss = 0.0
+	new_lr = 0.0
 	for ep in 1:epochs
 		if cyclic_lr
-			new_lr = cyclic_LR(ep, epochs, lr_init=lr_init, swag_start = swag_start)
+			new_lr = cyclic_LR(ep, epochs, lr_init=lr_init, lr_ratio=0.05)
 			opt.eta = new_lr
 		end
 		for d in data
@@ -187,8 +196,14 @@ function pretrain(epochs, L, ps, data, opt; print_freq = 1000, lr_init = 1e-2, s
 	end
 	return ps
 end
-function weight_uncertainty(model, cost, data, opt; callback =()->(return 0), itr = 100, T=10, c=1, M=3)
-	W_swa, P, chn = subspace_inference(model, cost, data, opt, callback =()->(return 0), itr = itr, T=T, c=c, M=M)
+function weight_uncertainty(model, cost, data, opt; callback =()->(return 0),
+	prior_dist = Normal(0.0,10.0), σ_l = 10.0, alg = NUTS(0.65), 
+	itr = 100, T=10, c=1, M=3)
+
+	W_swa, P, chn = subspace_inference(model, cost, data, opt, 
+	callback =()->(return 0), 
+	prior_dist = prior_dist, σ_l = σ_l, alg = alg,
+	itr = itr, T=T, c=c, M=M)
 	n_samples = length(chn["z[1]"]);
 	z_samples = Array{Float64}(undef,M,n_samples)
 	for j in 1:M
