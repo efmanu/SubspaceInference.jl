@@ -65,7 +65,8 @@ To construct subspace from pretrained weights.
 
 
 """
-function subspace_construction(model, cost, data, opt; callback = ()->(return 0), T = 10, c = 1, M = 3, LR_init = 0.01)
+function subspace_construction(model, cost, data, opt; 
+	callback = ()->(return 0), T = 10, c = 1, M = 3, LR_init = 0.01)
 	training_loss = 0.0
 	m_swa = model #mean model
 
@@ -107,7 +108,9 @@ function subspace_construction(model, cost, data, opt; callback = ()->(return 0)
 end
 
 """
-    subspace_inference(model, cost, data, opt, callback; itr =1000, T=10, c=1, M=3, svd_len=1)
+    subspace_inference(model, cost, data, opt; callback =()->(return 0),
+	prior_dist = Normal(0.0,10.0), σ_l = 10.0, alg = NUTS(0.65),
+	itr =1000, T=10, c=1, M=3)
 To generate the uncertainty in machine learing models using subspace inference method
 
 # Input Arguments
@@ -115,13 +118,15 @@ To generate the uncertainty in machine learing models using subspace inference m
 - `cost`	: Cost function. Eg: L(x, y) = Flux.Losses.mse(m(x), y)
 - `data`	: Inputs and outputs. Eg:	X = rand(10,100); Y = rand(2,100); data = DataLoader(X,Y);
 - `opt`		: Optimzer. Eg: opt = ADAM(0.1)
-- `callback`: Callback function during training. Eg: callback() = @show(L(X,Y))	
 # Keyword Arguments
+- `callback` :
+- `prior_dist`:
+- `σ_l`   	:
+- `alg`
 - `itr`		: Iterations for sampling
 - `T`		: Number of steps for subspace calculation. Eg: T= 1
 - `c`		: Moment update frequency. Eg: c = 1
-- `M`		: Maximum number of columns in deviation matrix. Eg: M= 2
-- `svd_len`	: Number of columns in right singukar vectors during SVD. Eg; svd_len = 1
+- `M`		: Maximum number of columns in deviation matrix. Eg: M= 3
 
 # Output
 
