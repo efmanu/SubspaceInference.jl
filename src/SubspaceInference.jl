@@ -14,7 +14,7 @@ using LazyArrays
 using DistributionsAD
 using Zygote
 using Statistics
-using Plots
+using PyPlot
 
 ###########
 # Exports #
@@ -66,7 +66,7 @@ To construct subspace from pretrained weights.
 
 """
 function subspace_construction(model, cost, data, opt; 
-	callback = ()->(return 0), T = 10, c = 1, M = 3, LR_init = 0.01)
+	callback = ()->(return 0), T = 10, c = 1, M = 3, LR_init = 0.01, print_freq = 1)
 	training_loss = 0.0
 	m_swa = model #mean model
 
@@ -97,7 +97,9 @@ function subspace_construction(model, cost, data, opt;
 				append!(A, W_dev)
 			end				
 		end
-		println("Traing loss: ", training_loss," Epoch: ", i)
+		if (mod(i,print_freq) == 0 )|| (i == T)
+			println("Traing loss: ", training_loss," Epoch: ", i)
+		end
 	end
 
 	col_a = Int(floor(length(A)/all_len))
@@ -136,9 +138,9 @@ To generate the uncertainty in machine learing models using subspace inference m
 """
 function subspace_inference(model, cost, data, opt; callback =()->(return 0),
 	prior_dist = Normal(0.0,10.0), σ_l = 10.0, alg = NUTS(0.65),
-	itr =1000, T=10, c=1, M=3)
+	itr =1000, T=10, c=1, M=3, print_freq=1)
 	#create subspace P
-	W_swa, P, re = subspace_construction(model, cost, data, opt, M=M, T=T)
+	W_swa, P, re = subspace_construction(model, cost, data, opt, M=M, T=T, print_freq=print_freq)
 	chn = inference(data, W_swa, re, P, itr = itr, M = M, prior_dist = prior_dist,
 	alg = alg, σ_l = σ_l)
 	return W_swa, P, chn
@@ -203,12 +205,12 @@ function pretrain(epochs, L, ps, data, opt; print_freq = 1000, lr_init = 1e-2,
 end
 function weight_uncertainty(model, cost, data, opt; callback =()->(return 0),
 	prior_dist = Normal(0.0,10.0), σ_l = 10.0, alg = NUTS(0.65), 
-	itr = 100, T=10, c=1, M=3)
+	itr = 100, T=10, c=1, M=3, print_freq=1)
 
 	W_swa, P, chn = subspace_inference(model, cost, data, opt, 
 	callback =()->(return 0), 
 	prior_dist = prior_dist, σ_l = σ_l, alg = alg,
-	itr = itr, T=T, c=c, M=M)
+	itr = itr, T=T, c=c, M=M, print_freq=print_freq)
 	n_samples = length(chn["z[1]"]);
 	z_samples = Array{Float64}(undef,M,n_samples)
 	for j in 1:M
@@ -218,18 +220,34 @@ function weight_uncertainty(model, cost, data, opt; callback =()->(return 0),
 	
 	return chn_weights
 end
-function plot_predictive(data, trajectories, xs; μ=0, σ=0, title="Plot", legend = false)
-	scatter(data[:,1],data[:,2],color=["red"], title=title, legend=legend)
-	if μ == 0
-        μ = mean(trajectories, dims=2)
-    end
-    if σ == 0
-        σ = std(trajectories, dims=2)
-    end
-    plot!(xs, μ, color=["blue"], legend=legend)
-    plot!(xs, (μ - 3σ), color=["blue"], legend=legend)
-    plot!(xs, (μ + 3σ), color=["blue"], legend=legend)
-    plot!(xs,μ,grid=false,ribbon=3σ,fillalpha=.5, color=["blue"], legend=legend)
-
+function plot_predictive(data, trajectories, xs; μ=0, σ=0, title=["Plot"], legend = false)
+	
+	lt = length(trajectories)
+	if lt < 1
+		throw("Err: No data")
+	elseif lt == 1
+		μ = mean(trajectories["1"], dims=2)
+		σ = std(trajectories["1"], dims=2)
+		(fig, f_axes) = PyPlot.subplots(ncols=1, nrows=1)
+		f_axes.scatter(data[:,1],data[:,2], c="red", marker=".")
+		f_axes.plot(xs,vec(μ), c="blue")
+		f_axes.fill_between(xs, vec(μ+3σ), vec(μ-3σ), alpha=0.5)
+		
+		f_axes.set_title(title[1])
+		fig.show()
+	else
+		nrows = Int(ceil(lt/2))
+		fig, f_axes = PyPlot.subplots(ncols=2, nrows=nrows)
+		for i in 1:lt
+			μ = mean(trajectories["$i"], dims=2)
+			σ = std(trajectories["$i"], dims=2)
+			f_axes[i].scatter(data[:,1],data[:,2], c="red", marker=".")
+			f_axes[i].plot(xs,vec(μ), c="blue")
+			f_axes[i].fill_between(xs, vec(μ+3σ), vec(μ-3σ), alpha=0.5)
+			f_axes[i].set_title(title[i])
+		end
+		fig.show()
+	end		
 end
+
 end # module
