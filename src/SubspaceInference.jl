@@ -62,8 +62,6 @@ To construct subspace from pretrained weights.
 # Outputs
 - `W_swa`: Mean weights
 - `P` : Projection Matrix
-
-
 """
 function subspace_construction(model, cost, data, opt; 
 	callback = ()->(return 0), T = 10, c = 1, M = 3, LR_init = 0.01, print_freq = 1)
