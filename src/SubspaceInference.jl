@@ -8,13 +8,10 @@ using Flux: @epochs
 
 using LinearAlgebra
 using TSVD
-using Turing
-using Distributions
-using LazyArrays
-using DistributionsAD
 using Zygote
 using Statistics
 using PyPlot
+using MHSampler
 
 ###########
 # Exports #
@@ -64,7 +61,9 @@ To construct subspace from pretrained weights.
 - `P` : Projection Matrix
 """
 function subspace_construction(model, cost, data, opt; 
-	callback = ()->(return 0), T = 10, c = 1, M = 3, LR_init = 0.01, print_freq = 1)
+	callback = ()->(return 0), T = 10, c = 1, M = 3, 
+	LR_init = 0.01, print_freq = 1
+)
 	training_loss = 0.0
 	m_swa = model #mean model
 
@@ -143,26 +142,20 @@ function subspace_inference(model, cost, data, opt; callback =()->(return 0),
 	alg = alg, σ_l = σ_l)
 	return W_swa, P, chn
 end
-function inference(data, W_swa, re, P;
-    alg = NUTS(0.65), prior_dist = Normal(0.0,10.0),
+function inference(data, W_swa, re, P; prior_dist = Normal(0.0,10.0),
      σ_l = 10.0, itr=100, M = 3)
-
+	proposalf() = tuple(W_swa + P*map(rand, MvNormal(zeros(M))))
 	(in_data, out_data) = split_data(data)
-	@model infer(W_swa, P, re, in_data, out_data, M,
-		prior_dist, σ_l,
-		::Type{T}=Float64) where {T} = begin
-		#prior Z
-		z ~ filldist(prior_dist, M)
-		W_til = W_swa + P*z
-
-		pred = predict_out(W_til, re, in_data)
-
-		obs = DistributionsAD.lazyarray(Normal, copy(pred), σ_l)
-		out_data ~ arraydist(obs)
+	function model(x,W) 
+		ml = re(W)
+		return Normal.(ml(x), 5.0)
+	end
+	if !(prior isa Tuple)
+		prior = tuple(prior)
 	end
 
-	model = infer(W_swa, P, re, in_data, out_data, M, prior_dist, σ_l)
-	chn = sample(model, alg, itr)
+	chm = mh(prior, proposalf, model = model, input = input, output = output, itr = itr)
+
 	return chn
 end
 
