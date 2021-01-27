@@ -149,17 +149,15 @@ function inference(data, W_swa, re, P; σ_z = 10.0,
 	σ_m = 10.0, σ_p = 10.0, itr=100, M = 3)
 	(in_data, out_data) = SubspaceInference.split_data(data)
 	function proposalf()
-		return tuple(W_swa + P*rand(MvNormal(zeros(M),σ_z)))
+		return W_swa + P*rand(MvNormal(zeros(M),σ_z))
 	end
-	function model(x,W) 
+	function model(W) 
 		ml = re(W)
-		return Normal.(ml(x), σ_m)
+		return Normal.(ml(in_data), σ_m)
 	end
 	prior = MvNormal(zeros(length(W_swa)),σ_p)
-	if !(prior isa Tuple)
-		prior = tuple(prior)
-	end
-	chm = MHSampler.mh(prior, proposalf, model = model, input = in_data, output = out_data, itr = itr)
+
+	chm = MHSampler.mh(prior, proposalf, model = model, output = out_data, itr = itr)
 
 	return chm
 end
