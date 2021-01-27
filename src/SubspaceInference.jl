@@ -12,6 +12,7 @@ using Zygote
 using Statistics
 using PyPlot
 using MHSampler
+using Distributions
 
 ###########
 # Exports #
@@ -36,29 +37,33 @@ function cyclic_LR(epoch, total_epochs; lr_init=0.01, lr_ratio=0.05)
 	return (factor * lr_init)
 end
 """
-    subspace_construction(model, shape, cost, data, opt, callback;T = 10, η = 0.1, c = 1, M = 2, svd_len = 1)
+    subspace_construction(model, cost, data, opt; 
+		callback = ()->(return 0), T = 10, c = 1, M = 3, 
+		LR_init = 0.01, print_freq = 1
+	)
 Izmailov, P., Maddox, W. J., Kirichenko, P., Garipov, T., Vetrov, D., & Wilson, A. G. (2020, August). Subspace inference for Bayesian deep learning. 
 In Uncertainty in Artificial Intelligence (pp. 1169-1179). PMLR.
 
 To construct subspace from pretrained weights.
 
 # Input Arguments
-- `model` : Machine learning model. Eg: Chain(Dense(10,2)). Model should be created with Chain in Flux
-- `shape` : Shape of the neural network layer. Eg: shape =[((2,10),2)] based on above model. The type of shape should be Array{Tuple{Tuple{Int64,Int64},Int64},1}
-- `cost` : Cost function. Eg: L(x, y) = Flux.Losses.mse(m(x), y)
-- `data` : Inputs and outputs. Eg:	X = rand(10,100); Y = rand(2,100); data = DataLoader(X,Y);
-- `opt`	: Optimzer. Eg: opt = ADAM(0.1)
-- `callback` : Callback function during training. Eg: callback() = @show(L(X,Y))
+- `model` 	 : Machine learning model. Eg: Chain(Dense(10,2)). Model should be created with Chain in Flux
+- `cost`  	 : Cost function. Eg: L(x, y) = Flux.Losses.mse(m(x), y)
+- `data` 	 : Inputs and outputs. Eg:	X = rand(10,100); Y = rand(2,100); data = DataLoader(X,Y);
+- `opt`		 : Optimzer. Eg: opt = ADAM(0.1)
 
 # Keyword Arguments
-- `T` : Number of steps for subspace calculation. Eg: T= 1
-- `c` : Moment update frequency. Eg: c = 1
-- `M` : Maximum number of columns in deviation matrix. Eg: M= 2
-- `svd_len`: Number of columns in right singukar vectors during SVD. Eg; svd_len = 1
+- `callback`  : Callback function during training. Eg: callback() = @show(L(X,Y))
+- `T` 		  : Number of steps for subspace calculation. Eg: T= 1
+- `c` 		  : Moment update frequency. Eg: c = 1
+- `M` 		  : Maximum number of columns in deviation matrix. Eg: M= 2
+- `LR_init`	  : Initial learning rate cyclic learning rate updation
+- `print_freq`: Loss printing frequency
 
 # Outputs
-- `W_swa`: Mean weights
-- `P` : Projection Matrix
+- `W_swa`    : Mean weights
+- `P` 		 : Projection Matrix
+- `re` 		 : Model reconstruction function
 """
 function subspace_construction(model, cost, data, opt; 
 	callback = ()->(return 0), T = 10, c = 1, M = 3, 
@@ -108,55 +113,55 @@ end
 
 """
     subspace_inference(model, cost, data, opt; callback =()->(return 0),
-	prior_dist = Normal(0.0,10.0), σ_l = 10.0, alg = NUTS(0.65),
-	itr =1000, T=10, c=1, M=3)
-To generate the uncertainty in machine learing models using subspace inference method
+		σ_z = 10.0,	σ_m = 10.0, σ_p = 10.0,
+		itr =1000, T=10, c=1, M=3, print_freq=1
+	)
+To generate the uncertainty in machine learing models using MH Sampler from subspace
 
 # Input Arguments
-- `model`	: Machine learning model. Eg: Chain(Dense(10,2)). Model should be created with Chain in Flux
-- `cost`	: Cost function. Eg: L(x, y) = Flux.Losses.mse(m(x), y)
-- `data`	: Inputs and outputs. Eg:	X = rand(10,100); Y = rand(2,100); data = DataLoader(X,Y);
-- `opt`		: Optimzer. Eg: opt = ADAM(0.1)
+- `model`		: Machine learning model. Eg: Chain(Dense(10,2)). Model should be created with Chain in Flux
+- `cost`		: Cost function. Eg: L(x, y) = Flux.Losses.mse(m(x), y)
+- `data`		: Inputs and outputs. Eg:	X = rand(10,100); Y = rand(2,100); data = DataLoader(X,Y);
+- `opt`			: Optimzer. Eg: opt = ADAM(0.1)
 # Keyword Arguments
-- `callback` :
-- `prior_dist`:
-- `σ_l`   	:
-- `alg`
-- `itr`		: Iterations for sampling
-- `T`		: Number of steps for subspace calculation. Eg: T= 1
-- `c`		: Moment update frequency. Eg: c = 1
-- `M`		: Maximum number of columns in deviation matrix. Eg: M= 3
+- `callback`  	: Callback function during training. Eg: callback() = @show(L(X,Y))
+- `σ_z`   		: Standard deviation of subspace
+- `σ_m`   		: Standard deviation of likelihood model
+- `σ_p`   		: Standard deviation of prior
+- `itr`			: Iterations for sampling
+- `T`			: Number of steps for subspace calculation. Eg: T= 1
+- `c`			: Moment update frequency. Eg: c = 1
+- `M`			: Maximum number of columns in deviation matrix. Eg: M= 3
 
 # Output
 
-- `W_swa`	: Mean weights
-- `P`		: Subspace
-- `chn`		: Chain with samples with uncertainty informations
+- `chn`			: Chain with samples with uncertainty informations
 """
 function subspace_inference(model, cost, data, opt; callback =()->(return 0),
-	prior_dist = Normal(0.0,10.0), σ_l = 10.0, alg = NUTS(0.65),
+	σ_z = 10.0,	σ_m = 10.0, σ_p = 10.0,
 	itr =1000, T=10, c=1, M=3, print_freq=1)
 	#create subspace P
 	W_swa, P, re = subspace_construction(model, cost, data, opt, M=M, T=T, print_freq=print_freq)
-	chn = inference(data, W_swa, re, P, itr = itr, M = M, prior_dist = prior_dist,
-	alg = alg, σ_l = σ_l)
-	return W_swa, P, chn
+	chn = inference(data, W_swa, re, P, σ_z = σ_z,	σ_m = σ_m, σ_p = σ_p, itr=itr, M = M)
+	return chn
 end
-function inference(data, W_swa, re, P; prior_dist = Normal(0.0,10.0),
-     σ_l = 10.0, itr=100, M = 3)
-	proposalf() = tuple(W_swa + P*map(rand, MvNormal(zeros(M))))
-	(in_data, out_data) = split_data(data)
+function inference(data, W_swa, re, P; σ_z = 10.0,
+	σ_m = 10.0, σ_p = 10.0, itr=100, M = 3)
+	(in_data, out_data) = SubspaceInference.split_data(data)
+	function proposalf()
+		return tuple(W_swa + P*rand(MvNormal(zeros(M),σ_z)))
+	end
 	function model(x,W) 
 		ml = re(W)
-		return Normal.(ml(x), 5.0)
+		return Normal.(ml(x), σ_m)
 	end
+	prior = MvNormal(zeros(length(W_swa)),σ_p)
 	if !(prior isa Tuple)
 		prior = tuple(prior)
 	end
+	chm = MHSampler.mh(prior, proposalf, model = model, input = in_data, output = out_data, itr = itr)
 
-	chm = mh(prior, proposalf, model = model, input = input, output = output, itr = itr)
-
-	return chn
+	return chm
 end
 
 function split_data(data)
@@ -195,12 +200,12 @@ function pretrain(epochs, L, ps, data, opt; print_freq = 1000, lr_init = 1e-2,
 	return ps
 end
 function weight_uncertainty(model, cost, data, opt; callback =()->(return 0),
-	prior_dist = Normal(0.0,10.0), σ_l = 10.0, alg = NUTS(0.65), 
+	prior_dist = Normal(0.0,10.0), σ_z = 10.0,	σ_m = 10.0, σ_p = 10.0, 
 	itr = 100, T=10, c=1, M=3, print_freq=1)
 
 	W_swa, P, chn = subspace_inference(model, cost, data, opt, 
 	callback =()->(return 0), 
-	prior_dist = prior_dist, σ_l = σ_l, alg = alg,
+	prior_dist = prior_dist, σ_z = σ_z,	σ_m = σ_m, σ_p = σ_p,
 	itr = itr, T=T, c=c, M=M, print_freq=print_freq)
 	n_samples = length(chn["z[1]"]);
 	z_samples = Array{Float64}(undef,M,n_samples)
