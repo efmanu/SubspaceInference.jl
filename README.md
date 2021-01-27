@@ -9,27 +9,30 @@ This work is implemented by referring the folloing publication:
 
 ## Subspace Inference
 To generate the uncertainty in machine learing models using subspace inference method
+```julia
+subspace_inference(model, cost, data, opt; callback =()->(return 0),
+	σ_z = 10.0,	σ_m = 10.0, σ_p = 10.0,
+	itr =1000, T=10, c=1, M=3, print_freq=1)
+```
 
 # Input Arguments
-
-- `model`	: Machine learning model. Eg: Chain(Dense(10,2)). Model should be created with Chain in Flux
-- `cost`	: Cost function. Eg: L(x, y) = Flux.Losses.mse(m(x), y)
-- `data`	: Inputs and outputs. Eg:	X = rand(10,100); Y = rand(2,100); data = DataLoader(X,Y);
-- `opt`		: Optimzer. Eg: opt = ADAM(0.1)
-- `callback`: Callback function during training. Eg: callback() = @show(L(X,Y))	
-
+- `model`		: Machine learning model. Eg: Chain(Dense(10,2)). Model should be created with Chain in Flux
+- `cost`		: Cost function. Eg: L(x, y) = Flux.Losses.mse(m(x), y)
+- `data`		: Inputs and outputs. Eg:	X = rand(10,100); Y = rand(2,100); data = DataLoader(X,Y);
+- `opt`			: Optimzer. Eg: opt = ADAM(0.1)
 # Keyword Arguments
-
-- `itr`		: Iterations for sampling
-- `T`		: Number of steps for subspace calculation. Eg: T= 1
-- `c`		: Moment update frequency. Eg: c = 1
-- `M`		: Maximum number of columns in deviation matrix. Eg: M= 2
-- `svd_len`	: Number of columns in right singukar vectors during SVD. Eg; svd_len = 1
+- `callback`  	: Callback function during training. Eg: callback() = @show(L(X,Y))
+- `σ_z`   		: Standard deviation of subspace
+- `σ_m`   		: Standard deviation of likelihood model
+- `σ_p`   		: Standard deviation of prior
+- `itr`			: Iterations for sampling
+- `T`			: Number of steps for subspace calculation. Eg: T= 1
+- `c`			: Moment update frequency. Eg: c = 1
+- `M`			: Maximum number of columns in deviation matrix. Eg: M= 3
 
 # Output
-- `W_swa`	: Mean weights
-- `P`		: Subspace
-- `chn`		: Chain with samples with uncertainty informations
+
+- `chn`			: Chain with samples with uncertainty informations
 
 ### Example
 
