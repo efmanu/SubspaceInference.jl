@@ -7,12 +7,13 @@ using Flux: Data.DataLoader
 using Flux: @epochs
 
 using LinearAlgebra
-using TSVD
+using LowRankApprox
 using Zygote
 using Statistics
 using PyPlot
-using MHSampler
 using Distributions
+using AdvancedMH
+using MCMCChains
 
 ###########
 # Exports #
@@ -106,15 +107,16 @@ function subspace_construction(model, cost, data, opt;
 
 	# col_a = Int(floor(length(A)/all_len))
 	A = reshape(A, all_len, :)
-	U,s,V = TSVD.tsvd(A,M)
-	P = U*LinearAlgebra.Diagonal(s)
+	# U,s,V = TSVD.tsvd(A,M)
+	U,s,V = psvd(A)
+	P = U[:,1:M]*LinearAlgebra.Diagonal(s[1:M])
 	return W_swa, P, re
 end
 
 """
     subspace_inference(model, cost, data, opt; callback =()->(return 0),
-		σ_z = 10.0,	σ_m = 10.0, σ_p = 10.0,
-		itr =1000, T=10, c=1, M=3, print_freq=1
+		σ_z = 1.0,	σ_m = 1.0, σ_p = 1.0,
+		itr =1000, T=25, c=1, M=20, print_freq=1
 	)
 To generate the uncertainty in machine learing models using MH Sampler from subspace
 
@@ -136,31 +138,37 @@ To generate the uncertainty in machine learing models using MH Sampler from subs
 # Output
 
 - `chn`			: Chain with samples with uncertainty informations
+- `lp`			: Log probabilities of all samples
+- `W_swa`		: Mean Weight
+- `re`			: Model reformatting function
 """
 function subspace_inference(model, cost, data, opt; callback =()->(return 0),
-	σ_z = 10.0,	σ_m = 10.0, σ_p = 10.0,
-	itr =1000, T=10, c=1, M=3, print_freq=1)
+	σ_z = 1.0,	σ_m = 1.0, σ_p = 1.0,
+	itr =1000, T=25, c=1, M=20, print_freq=1)
 	#create subspace P
 	W_swa, P, re = subspace_construction(model, cost, data, opt, M=M, T=T, print_freq=print_freq)
-	chn = inference(data, W_swa, re, P, σ_z = σ_z,	σ_m = σ_m, σ_p = σ_p, itr=itr, M = M)
-	return chn, W_swa, re
+	chn, lp = inference(data, W_swa, re, P, σ_z = σ_z,	σ_m = σ_m, σ_p = σ_p, itr=itr, M = M)
+	return chn, lp, W_swa, re
 end
-function inference(data, W_swa, re, P; σ_z = 10.0,
-	σ_m = 10.0, σ_p = 10.0, itr=100, M = 3)
+function inference(data, W_swa, re, P; σ_z = 1.0,
+	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3)
 	(in_data, out_data) = SubspaceInference.split_data(data)
-	function proposalf()
-		return W_swa + P*rand(MvNormal(zeros(M),σ_z))
+	proposal = MvNormal(zeros(M),σ_z)
+	function density(z) 
+		new_W = W_swa + P*z
+		ml = re((new_W))
+		return logpdf(MvNormal(vec(ml(in_data)), σ_m), vec(out_data)) 
+		+ logpdf(MvNormal(zeros(length(new_W)), σ_p), new_W)
 	end
-	function model(W) 
-		ml = re(W)
-		return Normal.(ml(in_data), σ_m)
-	end
+	model = DensityModel(density)
+	spl = RWMH(proposal)
 	prior = MvNormal(zeros(length(W_swa)),σ_p)
 
-	chm = MHSampler.mh(prior, proposalf, model = model, output = out_data, itr = itr)
+	chm = sample(model, spl, itr; param_names=["z"])
 
-	return chm
+	return map(z->(W_swa + P*z.params), chm), map(z->z.lp, chm)
 end
+
 
 function split_data(data)
 	return data.data[1], data.data[2]

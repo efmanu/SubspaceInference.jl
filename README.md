@@ -11,8 +11,8 @@ This work is implemented by referring the folloing publication:
 To generate the uncertainty in machine learing models using subspace inference method
 ```julia
 subspace_inference(model, cost, data, opt; callback =()->(return 0),
-	σ_z = 10.0,	σ_m = 10.0, σ_p = 10.0,
-	itr =1000, T=10, c=1, M=3, print_freq=1)
+	σ_z = 1.0,	σ_m = 1.0, σ_p = 1.0,
+	itr =1000, T=25, c=1, M=20, print_freq=1)
 ```
 
 # Input Arguments
@@ -32,7 +32,10 @@ subspace_inference(model, cost, data, opt; callback =()->(return 0),
 
 # Output
 
-- `chn`			: Chain with samples with uncertainty informations
+- `chn`			: Chain with samples with uncertainty 
+- `lp`			: Log probabilities of all samples
+- `W_swa`		: Mean Weight
+- `re`			: Model reformatting functioninformations
 
 ### Example
 
@@ -53,7 +56,7 @@ data =  DataLoader(X,Y, shuffle=true)
 
 m = Chain(Dense(l_m, 20), Dense(20, 20), Dense(20, O)) #model
 
-L(x, y) = Flux.Losses.mse(m(x), y) #cost function
+L(m, x, y) = Flux.Losses.mse(m(x), y) #cost function
 
 
 ps = Flux.params(m) #model parameters
