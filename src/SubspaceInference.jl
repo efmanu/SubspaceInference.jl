@@ -83,29 +83,29 @@ function subspace_construction(model, cost, data, opt;
 	for i in 1:T
 		for d in data
 			gs = gradient(ps) do
-				training_loss = cost(d...)
+				training_loss = cost(model, d...)
 				return training_loss
 			end			
 			Flux.update!(opt, ps, gs)
+		end
+		if mod(i,c) == 0
 			W = Array{Float64}(undef,0)
 			[append!(W, reshape(ps.order.data[i],:,1)) for i in 1:ps.params.dict.count];
-			if mod(i,c) == 0
-				n = i/c
-				W_swa = (n.*W_swa + W)./(n+1)
-				if(length(A) >= M*all_len)
-					A = A[1:(end - all_len)]
-				end
-				W_dev =  W - W_swa
-				append!(A, W_dev)
-			end				
-		end
+			n = i/c
+			W_swa = (n.*W_swa + W)./(n+1)
+			# if(length(A) >= M*all_len)
+			# 	A = A[1:(end - all_len)]
+			# end
+			W_dev =  W - W_swa
+			append!(A, W_dev)
+		end	
 		if (mod(i,print_freq) == 0 )|| (i == T)
 			println("Traing loss: ", training_loss," Epoch: ", i)
 		end
 	end
 
-	col_a = Int(floor(length(A)/all_len))
-	A = reshape(A, all_len, col_a)
+	# col_a = Int(floor(length(A)/all_len))
+	A = reshape(A, all_len, :)
 	U,s,V = TSVD.tsvd(A,M)
 	P = U*LinearAlgebra.Diagonal(s)
 	return W_swa, P, re
@@ -143,7 +143,7 @@ function subspace_inference(model, cost, data, opt; callback =()->(return 0),
 	#create subspace P
 	W_swa, P, re = subspace_construction(model, cost, data, opt, M=M, T=T, print_freq=print_freq)
 	chn = inference(data, W_swa, re, P, σ_z = σ_z,	σ_m = σ_m, σ_p = σ_p, itr=itr, M = M)
-	return chn
+	return chn, W_swa, re
 end
 function inference(data, W_swa, re, P; σ_z = 10.0,
 	σ_m = 10.0, σ_p = 10.0, itr=100, M = 3)
