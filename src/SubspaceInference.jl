@@ -14,6 +14,7 @@ using PyPlot
 using Distributions
 using AdvancedMH
 using MCMCChains
+using AdvancedHMC, ForwardDiff, Zygote
 
 ###########
 # Exports #
@@ -71,16 +72,16 @@ function subspace_construction(model, cost, data, opt;
 	LR_init = 0.01, print_freq = 1
 )
 	training_loss = 0.0
-	m_swa = model #mean model
 
-	W_swa, re = extract_weights(m_swa);
-	all_len = length(W_swa)
+	W_bk, re = extract_weights(model);
 
-	A = Array{Float64}(undef,0) #initialize deviation matrix
 	ps = Flux.params(model)
+	W_swa = extract_params(ps)
+	all_len = length(W_swa)
+	A = Array{Float64}(undef,0) #initialize deviation matrix
+	
 	# #initaize weights with mean
 	all_weights = []
-	cb = () -> push!(all_weights, extract_weights(model))
 	for i in 1:T
 		for d in data
 			gs = gradient(ps) do
@@ -90,8 +91,7 @@ function subspace_construction(model, cost, data, opt;
 			Flux.update!(opt, ps, gs)
 		end
 		if mod(i,c) == 0
-			W = Array{Float64}(undef,0)
-			[append!(W, reshape(ps.order.data[i],:,1)) for i in 1:ps.params.dict.count];
+			W = extract_params(ps)
 			n = i/c
 			W_swa = (n.*W_swa + W)./(n+1)
 			# if(length(A) >= M*all_len)
@@ -113,10 +113,14 @@ function subspace_construction(model, cost, data, opt;
 	return W_swa, P, re
 end
 
+function extract_params(ps)
+	
+	return mapreduce(i -> vec(ps.order.data[i]), vcat, 1:ps.params.dict.count)
+end
 """
     subspace_inference(model, cost, data, opt; callback =()->(return 0),
 		σ_z = 1.0,	σ_m = 1.0, σ_p = 1.0,
-		itr =1000, T=25, c=1, M=20, print_freq=1
+		itr =1000, T=25, c=1, M=20, print_freq=1, alg =:hmc, backend = :zygote
 	)
 To generate the uncertainty in machine learing models using MH Sampler from subspace
 
@@ -134,6 +138,8 @@ To generate the uncertainty in machine learing models using MH Sampler from subs
 - `T`			: Number of steps for subspace calculation. Eg: T= 1
 - `c`			: Moment update frequency. Eg: c = 1
 - `M`			: Maximum number of columns in deviation matrix. Eg: M= 3
+- `alg`			: Sampling Algorithm. Eg: :hmc 
+- `backend`		: Differentiation backend. Eg: Zygote
 
 # Output
 
@@ -144,29 +150,59 @@ To generate the uncertainty in machine learing models using MH Sampler from subs
 """
 function subspace_inference(model, cost, data, opt; callback =()->(return 0),
 	σ_z = 1.0,	σ_m = 1.0, σ_p = 1.0,
-	itr =1000, T=25, c=1, M=20, print_freq=1)
+	itr =1000, T=25, c=1, M=20, print_freq=1, alg =:hmc, backend = Zygote)
 	#create subspace P
 	W_swa, P, re = subspace_construction(model, cost, data, opt, M=M, T=T, print_freq=print_freq)
-	chn, lp = inference(data, W_swa, re, P, σ_z = σ_z,	σ_m = σ_m, σ_p = σ_p, itr=itr, M = M)
-	return chn, lp, W_swa, re
+	chn, lp = inference(data, W_swa, re, P, σ_z = σ_z,	σ_m = σ_m, σ_p = σ_p, itr=itr, M = M, alg =alg, backend = backend)
+	return chn, lp, W_swa, re, P
 end
 function inference(data, W_swa, re, P; σ_z = 1.0,
-	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3)
-	(in_data, out_data) = SubspaceInference.split_data(data)
-	proposal = MvNormal(zeros(M),σ_z)
+	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3, alg = :hmc,
+	backend = Zygote)
+	(in_data, out_data) = SubspaceInference.split_data(data)	
 	function density(z) 
 		new_W = W_swa + P*z
 		ml = re((new_W))
 		return logpdf(MvNormal(vec(ml(in_data)), σ_m), vec(out_data)) 
 		+ logpdf(MvNormal(zeros(length(new_W)), σ_p), new_W)
 	end
-	model = DensityModel(density)
-	spl = RWMH(proposal)
-	prior = MvNormal(zeros(length(W_swa)),σ_p)
+	if alg == :mh
+		proposal = MvNormal(zeros(M),σ_z)
+		model = DensityModel(density)
+		spl = RWMH(proposal)
+		prior = MvNormal(zeros(length(W_swa)),σ_p)
 
-	chm = sample(model, spl, itr; param_names=["z"])
+		chm = sample(model, spl, itr; param_names=["z"])
 
-	return map(z->(W_swa + P*z.params), chm), map(z->z.lp, chm)
+		return map(z->(W_swa + P*z.params), chm), map(z->z.lp, chm)
+	else
+		initial_θ = rand(M)
+		n_samples, n_adapts = itr, Int(round(itr/2))
+
+		metric = DiagEuclideanMetric(M)
+
+		hamiltonian = Hamiltonian(metric, density, backend)
+
+		initial_ϵ = find_good_stepsize(hamiltonian, initial_θ)
+		integrator = Leapfrog(initial_ϵ)
+
+		proposal = NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator)
+		adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
+
+		samples, stats = sample(hamiltonian, proposal, initial_θ, n_samples, adaptor, n_adapts; progress=true)
+
+		return map(z->(W_swa + P*z), samples), map(z->z.log_density, stats)
+
+	end
+end
+
+function hmc_inference(data, W_swa, re, P; σ_z = 1.0,
+	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3)
+	(in_data, out_data) = SubspaceInference.split_data(data)
+	
+
+	
+	# return map(z->(W_swa + P*z.params), chm), map(z->z.lp, chm)
 end
 
 

@@ -56,7 +56,7 @@ data =  DataLoader(X,Y, shuffle=true)
 
 m = Chain(Dense(l_m, 20), Dense(20, 20), Dense(20, O)) #model
 
-L(m, x, y) = Flux.Losses.mse(m(x), y) #cost function
+L(x, y) = Flux.Losses.mse(m(x), y) #cost function
 
 
 ps = Flux.params(m) #model parameters
@@ -71,7 +71,8 @@ M = 3
 T = 10
 c= 1
 itr = 1000
-chn = subspace_inference(model, cost, data, opt, itr = itr, T=T, c=1, M=M)
+L1(m, x, y) = Flux.Losses.mse(m(x), y) #cost function
+chn = subspace_inference(m, L1, data, opt, itr = itr, T=T, c=1, M=M)
 ```
 
 ## Subspace Construction
