@@ -16,6 +16,9 @@ using AdvancedMH
 using MCMCChains
 using AdvancedHMC, ForwardDiff, Zygote
 
+using DiffResults
+using StructArrays
+
 ###########
 # Exports #
 ###########
@@ -73,12 +76,10 @@ function subspace_construction(model, cost, data, opt;
 )
 	training_loss = 0.0
 
-	W_bk, re = extract_weights(model);
-
 	ps = Flux.params(model)
-	W_swa = extract_params(ps)
+	W_swa = zeros(length(extract_params(ps)))
 	all_len = length(W_swa)
-	A = Array{Float64}(undef,0) #initialize deviation matrix
+	A = Array{eltype(W_swa)}(undef,0) #initialize deviation matrix
 	
 	# #initaize weights with mean
 	all_weights = []
@@ -89,28 +90,32 @@ function subspace_construction(model, cost, data, opt;
 				return training_loss
 			end			
 			Flux.update!(opt, ps, gs)
+			if mod(i,c) == 0
+				W = extract_params(ps)
+				n = i/c
+				W_swa = (n.*W_swa + W)./(n+1)
+				# if(length(A) >= M*all_len)
+				# 	A = A[1:(end - all_len)]
+				# end
+				W_dev =  W - W_swa
+				append!(A, W_dev)
+			end			
 		end
-		if mod(i,c) == 0
-			W = extract_params(ps)
-			n = i/c
-			W_swa = (n.*W_swa + W)./(n+1)
-			# if(length(A) >= M*all_len)
-			# 	A = A[1:(end - all_len)]
-			# end
-			W_dev =  W - W_swa
-			append!(A, W_dev)
-		end	
+			
+		
 		if (mod(i,print_freq) == 0 )|| (i == T)
 			println("Traing loss: ", training_loss," Epoch: ", i)
 		end
 	end
 
 	# col_a = Int(floor(length(A)/all_len))
+
 	A = reshape(A, all_len, :)
+	@show size(A)
 	# U,s,V = TSVD.tsvd(A,M)
 	U,s,V = psvd(A)
 	P = U[:,1:M]*LinearAlgebra.Diagonal(s[1:M])
-	return W_swa, P, re
+	return W_swa, P
 end
 
 function extract_params(ps)
@@ -152,28 +157,48 @@ function subspace_inference(model, cost, data, opt; callback =()->(return 0),
 	σ_z = 1.0,	σ_m = 1.0, σ_p = 1.0,
 	itr =1000, T=25, c=1, M=20, print_freq=1, alg =:hmc, backend = Zygote)
 	#create subspace P
-	W_swa, P, re = subspace_construction(model, cost, data, opt, M=M, T=T, print_freq=print_freq)
-	chn, lp = inference(data, W_swa, re, P, σ_z = σ_z,	σ_m = σ_m, σ_p = σ_p, itr=itr, M = M, alg =alg, backend = backend)
-	return chn, lp, W_swa, re, P
+	W_swa, P = subspace_construction(model, cost, data, opt, M=M, T=T, print_freq=print_freq)
+	chn, lp = inference(model, data, W_swa, P, σ_z = σ_z,	
+		σ_m = σ_m, σ_p = σ_p, itr=itr, M = M, alg =alg, backend = backend)
+	return chn, lp, W_swa
 end
-function inference(data, W_swa, re, P; σ_z = 1.0,
+function model_re(model, ps, W)
+	j = 1
+	# ety = eltype(ps.order.data[1])
+	for i in 1:ps.params.dict.count
+		ln_data = length(ps.order.data[i])
+		ps.order.data[i] = reshape(W[j:j+ln_data-1], size(ps.order.data[i]))
+		j += ln_data
+	end
+	Flux.loadparams!(model,ps)
+end
+sqnorm(x) = sum(abs2, x)
+function inference(m, data, W_swa, P; σ_z = 1.0,
 	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3, alg = :hmc,
 	backend = Zygote)
-	(in_data, out_data) = SubspaceInference.split_data(data)	
+	ps = Flux.params(m)
+	(in_data, out_data) = SubspaceInference.split_data(data)
+	(e,f) = size(in_data)
 	function density(z) 
 		new_W = W_swa + P*z
-		ml = re((new_W))
-		return logpdf(MvNormal(vec(ml(in_data)), σ_m), vec(out_data)) 
-		+ logpdf(MvNormal(zeros(length(new_W)), σ_p), new_W)
+		SubspaceInference.model_re(m, ps, new_W)
+		# ml = re(W_swa)
+		mlogpdf = 0
+		for p in 1:f
+			mlogpdf -= sqnorm(vec(m(in_data[:,p])) - vec(out_data[:,p])) 
+		end
+		return mlogpdf - sqnorm(new_W)
 	end
 	if alg == :mh
 		proposal = MvNormal(zeros(M),σ_z)
 		model = DensityModel(density)
 		spl = RWMH(proposal)
-		prior = MvNormal(zeros(length(W_swa)),σ_p)
+		# spl = MALA(x -> MvNormal((σ_z^2 / 2) .* x, σ_z))
+		# prior = MvNormal(zeros(length(W_swa)),σ_p)
 
 		chm = sample(model, spl, itr; param_names=["z"])
-
+		# chm = sample(model, spl, itr; init_params=zeros(M))
+		# return chm
 		return map(z->(W_swa + P*z.params), chm), map(z->z.lp, chm)
 	else
 		initial_θ = rand(M)

@@ -134,7 +134,7 @@ opt = ADAM(0.1) #optimizer
 
 callback() = @show(L(X,Y)) #callback function
 
-@epochs 1 Flux.train!(L, ps, data, opt, cb = () -> callback()) #training
+@epochs 1 Flux.train!(L1, ps, data, opt, cb = () -> callback()) #training
 
 M = 3
 T = 10
