@@ -15,7 +15,8 @@ using Distributions
 using AdvancedMH
 using MCMCChains
 using AdvancedHMC, ForwardDiff, Zygote
-
+using DiffEqFlux
+using DifferentialEquations
 using DiffResults
 using StructArrays
 
@@ -162,15 +163,18 @@ function subspace_inference(model, cost, data, opt; callback =()->(return 0),
 		σ_m = σ_m, σ_p = σ_p, itr=itr, M = M, alg =alg, backend = backend)
 	return chn, lp, W_swa
 end
-function model_re(model, ps, W)
-	j = 1
-	# ety = eltype(ps.order.data[1])
-	for i in 1:ps.params.dict.count
-		ln_data = length(ps.order.data[i])
-		ps.order.data[i] = reshape(W[j:j+ln_data-1], size(ps.order.data[i]))
-		j += ln_data
+function model_re(model,W)
+	if model isa NeuralODE
+		θ, re = Flux.destructure(model.model)
+		dudt = re(W)
+		new_model = NeuralODE(dudt,model.tspan,model.args[1],
+			saveat=model.kwargs[:saveat],
+				reltol=model.kwargs[:reltol],abstol=model.kwargs[:abstol])
+	else
+		θ, re = Flux.destructure(model)
+		new_model = re(W)
 	end
-	Flux.loadparams!(model,ps)
+	return new_model
 end
 sqnorm(x) = sum(abs2, x)
 function inference(m, data, W_swa, P; σ_z = 1.0,
@@ -180,14 +184,18 @@ function inference(m, data, W_swa, P; σ_z = 1.0,
 	(in_data, out_data) = SubspaceInference.split_data(data)
 	(e,f) = size(in_data)
 	function density(z) 
+		# @show z
 		new_W = W_swa + P*z
-		SubspaceInference.model_re(m, ps, new_W)
+		new_model = SubspaceInference.model_re(m, new_W)
 		# ml = re(W_swa)
 		mlogpdf = 0
 		for p in 1:f
-			mlogpdf -= sqnorm(vec(m(in_data[:,p])) - vec(out_data[:,p])) 
+			mlogpdf -= sqnorm(vec(new_model(in_data[:,p])) - vec(out_data[:,p])) 
 		end
-		return mlogpdf - sqnorm(new_W)
+		# den = mlogpdf - sqnorm(new_W)
+		# @show den
+		# mlogpdf - sqnorm(new_W)
+		return mlogpdf
 	end
 	if alg == :mh
 		proposal = MvNormal(zeros(M),σ_z)
@@ -196,12 +204,12 @@ function inference(m, data, W_swa, P; σ_z = 1.0,
 		# spl = MALA(x -> MvNormal((σ_z^2 / 2) .* x, σ_z))
 		# prior = MvNormal(zeros(length(W_swa)),σ_p)
 
-		chm = sample(model, spl, itr; param_names=["z"])
+		chm = sample(model, spl, itr; init_params=zeros(M))
 		# chm = sample(model, spl, itr; init_params=zeros(M))
 		# return chm
 		return map(z->(W_swa + P*z.params), chm), map(z->z.lp, chm)
 	else
-		initial_θ = rand(M)
+		initial_θ = zeros(M)
 		n_samples, n_adapts = itr, Int(round(itr/2))
 
 		metric = DiagEuclideanMetric(M)
