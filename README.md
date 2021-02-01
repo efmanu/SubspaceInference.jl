@@ -72,7 +72,7 @@ T = 10
 c= 1
 itr = 1000
 L1(m, x, y) = Flux.Losses.mse(m(x), y) #cost function
-chn = subspace_inference(m, L1, data, opt, itr = itr, T=T, c=1, M=M)
+chn, lp, W_swa = subspace_inference(m, L1, data, opt, itr = itr, T=T, c=1, M=M)
 ```
 
 ## Subspace Construction
@@ -134,13 +134,19 @@ opt = ADAM(0.1) #optimizer
 
 callback() = @show(L(X,Y)) #callback function
 
-@epochs 1 Flux.train!(L1, ps, data, opt, cb = () -> callback()) #training
+@epochs 1 Flux.train!(L, ps, data, opt, cb = () -> callback()) #training
 
 M = 3
 T = 10
 c= 1
+L(m, x, y) = Flux.Losses.mse(m(x), y) #cost function
+W_swa, P = subspace_construction(m, L, data, opt, T = T, c = c, M = M)
 
-W_swa, P, re = subspace_construction(m, L, data, opt, T = T, c = c, M = M)
+```
+### SubspaceInference
 
+```julia
+chn, lp = SubspaceInference.inference(m, data, W_swa, P; σ_z = 1.0,
+	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3, alg = :mh)
 ```
 
