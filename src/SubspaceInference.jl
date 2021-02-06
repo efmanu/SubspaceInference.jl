@@ -19,16 +19,18 @@ using DiffEqFlux
 using DifferentialEquations
 using DiffResults
 using StructArrays
+using ManifoldLearning
 
 ###########
 # Exports #
 ###########
-export  subspace_construction,subspace_inference
+export  subspace_construction,subspace_inference, inference
 
+#include functions
 include("plotting.jl")
 include("subspace_construction.jl")
 include("libs.jl")
-include("subspace_inference.jl")
+include("space_inference.jl")
 include("uncertainty.jl")
 
 

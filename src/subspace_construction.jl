@@ -16,11 +16,9 @@ To construct subspace from pretrained weights.
 - `opt`		 : Optimzer. Eg: opt = ADAM(0.1)
 
 # Keyword Arguments
-- `callback`  : Callback function during training. Eg: callback() = @show(L(X,Y))
 - `T` 		  : Number of steps for subspace calculation. Eg: T= 1
 - `c` 		  : Moment update frequency. Eg: c = 1
 - `M` 		  : Maximum number of columns in deviation matrix. Eg: M= 2
-- `LR_init`	  : Initial learning rate cyclic learning rate updation
 - `print_freq`: Loss printing frequency
 
 # Outputs
@@ -28,9 +26,7 @@ To construct subspace from pretrained weights.
 - `P` 		 : Projection Matrix
 - `re` 		 : Model reconstruction function
 """
-function subspace_construction(model, cost, data, opt; 
-	callback = ()->(return 0), T = 10, c = 1, M = 3, 
-	LR_init = 0.01, print_freq = 1
+function subspace_construction(model, cost, data, opt; T = 10, c = 1, M = 3, print_freq = 1
 )
 	training_loss = 0.0
 
@@ -58,20 +54,104 @@ function subspace_construction(model, cost, data, opt;
 				W_dev =  W - W_swa
 				append!(A, W_dev)
 			end			
-		end
-			
-		
+		end		
+		#print loss based o print frequency
 		if (mod(i,print_freq) == 0 )|| (i == T)
 			println("Traing loss: ", training_loss," Epoch: ", i)
 		end
 	end
 
-	# col_a = Int(floor(length(A)/all_len))
-
 	A = reshape(A, all_len, :)
-	# U,s,V = TSVD.tsvd(A,M)
+	#take pseudo SVD and take only first M columns
 	U,s,V = psvd(A)
+	#generate projection matrix
 	P = U[:,1:M]*LinearAlgebra.Diagonal(s[1:M])
 	return W_swa, P
 end
 
+function auto_encoder_subspace(model, cost, data, opt, encoder, decoder; T = 10, c = 1, M = 3, print_freq = 1
+)
+	training_loss = 0.0
+
+	ps = Flux.params(model)
+	W_swa = zeros(length(extract_params(ps)))
+	all_len = length(W_swa)
+	A = Array{eltype(W_swa)}(undef,0) #initialize deviation matrix
+	
+	# #initaize weights with mean
+	all_weights = []
+	for i in 1:T
+		for d in data
+			gs = gradient(ps) do
+				training_loss = cost(model, d...)
+				return training_loss
+			end			
+			Flux.update!(opt, ps, gs)
+			if mod(i,c) == 0
+				W = SubspaceInference.extract_params(ps)
+				append!(A, W)
+			end
+		end
+	end
+	# (in_data, out_data) = split_data(data)
+	# (e,f) = size(in_data)
+
+	re_weight = reshape(A, all_len, :)
+
+	# model
+	sae = Chain(encoder,decoder)
+	# loss
+	autoloss(X) = Flux.mse(sae(X), X)
+	
+	# optimization
+	opt = ADAM()
+	# parameters
+	autops = Flux.params(sae);
+	cb() = @show autoloss(re_weight)
+	#data
+	wdata = DataLoader(re_weight)
+	Flux.train!(autoloss, autops, wdata, opt; cb=cb)
+	return decoder
+
+end
+function diffusion_subspace(model, cost, data, opt; T = 10, c = 1, M = 3, print_freq = 1
+)
+	training_loss = 0.0
+
+	ps = Flux.params(model)
+	W_swa = zeros(length(extract_params(ps)))
+	all_len = length(W_swa)
+	A = Array{eltype(W_swa)}(undef,0) #initialize deviation matrix
+	
+	# #initaize weights with mean
+	all_weights = []
+	for i in 1:T
+		for d in data
+			gs = gradient(ps) do
+				training_loss = cost(model, d...)
+				return training_loss
+			end			
+			Flux.update!(opt, ps, gs)
+			if mod(i,c) == 0
+				W = extract_params(ps)
+				n = i/c
+				W_swa = (n.*W_swa + W)./(n+1)
+				# if(length(A) >= M*all_len)
+				# 	A = A[1:(end - all_len)]
+				# end
+				W_dev =  W - W_swa
+				append!(A, W_dev)
+			end			
+		end		
+		#print loss based o print frequency
+		if (mod(i,print_freq) == 0 )|| (i == T)
+			println("Traing loss: ", training_loss," Epoch: ", i)
+		end
+	end
+
+	A = reshape(A, all_len, :)
+	#diffusion map
+	diff_M = fit(DiffMap, A', maxoutdim=M) # construct diffusion map model
+	P = transform(diff_M)  
+	return W_swa, P'
+end

@@ -1,3 +1,4 @@
+#to plot uncertainities in neural networks
 function plot_predictive(data, trajectories, xs; μ=0, σ=0, title=["Plot"], legend = false)
 	
 	lt = length(trajectories)

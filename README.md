@@ -70,7 +70,7 @@ callback() = @show(L(X,Y)) #callback function
 M = 3
 T = 10
 c= 1
-itr = 1000
+itr = 10
 L1(m, x, y) = Flux.Losses.mse(m(x), y) #cost function
 chn, lp, W_swa = subspace_inference(m, L1, data, opt, itr = itr, T=T, c=1, M=M)
 ```

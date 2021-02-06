@@ -42,8 +42,8 @@ f_axes.legend()
 fig.show()
 
 #setting up 
-dudt = Chain(x -> x.^3, Dense(2,15,tanh),
-             Dense(15,2))
+dudt = Chain(x -> x.^3, Dense(2,50,tanh),
+             Dense(50,2))
 n_ode = NeuralODE(dudt,tspan,Tsit5(),saveat=t,
 	reltol=1e-7,abstol=1e-9)
 
