@@ -1,0 +1,427 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[a4paper,text={16.5cm,25.2cm},centering]{geometry}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{bm}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1.2ex}
+
+\hypersetup
+       {   pdfauthor = { Manu Francis },
+           pdftitle={ Subspace Inference for Deep Neural Networks },
+           colorlinks=TRUE,
+           linkcolor=black,
+           citecolor=blue,
+           urlcolor=blue
+       }
+
+\title{ Subspace Inference for Deep Neural Networks }
+
+\author{ Manu Francis }
+
+\date{ 08-02-2021 }
+
+\usepackage{upquote}
+\usepackage{listings}
+\usepackage{xcolor}
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    upquote=true,
+    breaklines=true,
+    breakindent=0pt,
+    keepspaces=true,
+    showspaces=false,
+    columns=fullflexible,
+    showtabs=false,
+    showstringspaces=false,
+    escapeinside={(*@}{@*)},
+    extendedchars=true,
+}
+\newcommand{\HLJLt}[1]{#1}
+\newcommand{\HLJLw}[1]{#1}
+\newcommand{\HLJLe}[1]{#1}
+\newcommand{\HLJLeB}[1]{#1}
+\newcommand{\HLJLo}[1]{#1}
+\newcommand{\HLJLk}[1]{\textcolor[RGB]{148,91,176}{\textbf{#1}}}
+\newcommand{\HLJLkc}[1]{\textcolor[RGB]{59,151,46}{\textit{#1}}}
+\newcommand{\HLJLkd}[1]{\textcolor[RGB]{214,102,97}{\textit{#1}}}
+\newcommand{\HLJLkn}[1]{\textcolor[RGB]{148,91,176}{\textbf{#1}}}
+\newcommand{\HLJLkp}[1]{\textcolor[RGB]{148,91,176}{\textbf{#1}}}
+\newcommand{\HLJLkr}[1]{\textcolor[RGB]{148,91,176}{\textbf{#1}}}
+\newcommand{\HLJLkt}[1]{\textcolor[RGB]{148,91,176}{\textbf{#1}}}
+\newcommand{\HLJLn}[1]{#1}
+\newcommand{\HLJLna}[1]{#1}
+\newcommand{\HLJLnb}[1]{#1}
+\newcommand{\HLJLnbp}[1]{#1}
+\newcommand{\HLJLnc}[1]{#1}
+\newcommand{\HLJLncB}[1]{#1}
+\newcommand{\HLJLnd}[1]{\textcolor[RGB]{214,102,97}{#1}}
+\newcommand{\HLJLne}[1]{#1}
+\newcommand{\HLJLneB}[1]{#1}
+\newcommand{\HLJLnf}[1]{\textcolor[RGB]{66,102,213}{#1}}
+\newcommand{\HLJLnfm}[1]{\textcolor[RGB]{66,102,213}{#1}}
+\newcommand{\HLJLnp}[1]{#1}
+\newcommand{\HLJLnl}[1]{#1}
+\newcommand{\HLJLnn}[1]{#1}
+\newcommand{\HLJLno}[1]{#1}
+\newcommand{\HLJLnt}[1]{#1}
+\newcommand{\HLJLnv}[1]{#1}
+\newcommand{\HLJLnvc}[1]{#1}
+\newcommand{\HLJLnvg}[1]{#1}
+\newcommand{\HLJLnvi}[1]{#1}
+\newcommand{\HLJLnvm}[1]{#1}
+\newcommand{\HLJLl}[1]{#1}
+\newcommand{\HLJLld}[1]{\textcolor[RGB]{148,91,176}{\textit{#1}}}
+\newcommand{\HLJLs}[1]{\textcolor[RGB]{201,61,57}{#1}}
+\newcommand{\HLJLsa}[1]{\textcolor[RGB]{201,61,57}{#1}}
+\newcommand{\HLJLsb}[1]{\textcolor[RGB]{201,61,57}{#1}}
+\newcommand{\HLJLsc}[1]{\textcolor[RGB]{201,61,57}{#1}}
+\newcommand{\HLJLsd}[1]{\textcolor[RGB]{201,61,57}{#1}}
+\newcommand{\HLJLsdB}[1]{\textcolor[RGB]{201,61,57}{#1}}
+\newcommand{\HLJLsdC}[1]{\textcolor[RGB]{201,61,57}{#1}}
+\newcommand{\HLJLse}[1]{\textcolor[RGB]{59,151,46}{#1}}
+\newcommand{\HLJLsh}[1]{\textcolor[RGB]{201,61,57}{#1}}
+\newcommand{\HLJLsi}[1]{#1}
+\newcommand{\HLJLso}[1]{\textcolor[RGB]{201,61,57}{#1}}
+\newcommand{\HLJLsr}[1]{\textcolor[RGB]{201,61,57}{#1}}
+\newcommand{\HLJLss}[1]{\textcolor[RGB]{201,61,57}{#1}}
+\newcommand{\HLJLssB}[1]{\textcolor[RGB]{201,61,57}{#1}}
+\newcommand{\HLJLnB}[1]{\textcolor[RGB]{59,151,46}{#1}}
+\newcommand{\HLJLnbB}[1]{\textcolor[RGB]{59,151,46}{#1}}
+\newcommand{\HLJLnfB}[1]{\textcolor[RGB]{59,151,46}{#1}}
+\newcommand{\HLJLnh}[1]{\textcolor[RGB]{59,151,46}{#1}}
+\newcommand{\HLJLni}[1]{\textcolor[RGB]{59,151,46}{#1}}
+\newcommand{\HLJLnil}[1]{\textcolor[RGB]{59,151,46}{#1}}
+\newcommand{\HLJLnoB}[1]{\textcolor[RGB]{59,151,46}{#1}}
+\newcommand{\HLJLoB}[1]{\textcolor[RGB]{102,102,102}{\textbf{#1}}}
+\newcommand{\HLJLow}[1]{\textcolor[RGB]{102,102,102}{\textbf{#1}}}
+\newcommand{\HLJLp}[1]{#1}
+\newcommand{\HLJLc}[1]{\textcolor[RGB]{153,153,119}{\textit{#1}}}
+\newcommand{\HLJLch}[1]{\textcolor[RGB]{153,153,119}{\textit{#1}}}
+\newcommand{\HLJLcm}[1]{\textcolor[RGB]{153,153,119}{\textit{#1}}}
+\newcommand{\HLJLcp}[1]{\textcolor[RGB]{153,153,119}{\textit{#1}}}
+\newcommand{\HLJLcpB}[1]{\textcolor[RGB]{153,153,119}{\textit{#1}}}
+\newcommand{\HLJLcs}[1]{\textcolor[RGB]{153,153,119}{\textit{#1}}}
+\newcommand{\HLJLcsB}[1]{\textcolor[RGB]{153,153,119}{\textit{#1}}}
+\newcommand{\HLJLg}[1]{#1}
+\newcommand{\HLJLgd}[1]{#1}
+\newcommand{\HLJLge}[1]{#1}
+\newcommand{\HLJLgeB}[1]{#1}
+\newcommand{\HLJLgh}[1]{#1}
+\newcommand{\HLJLgi}[1]{#1}
+\newcommand{\HLJLgo}[1]{#1}
+\newcommand{\HLJLgp}[1]{#1}
+\newcommand{\HLJLgs}[1]{#1}
+\newcommand{\HLJLgsB}[1]{#1}
+\newcommand{\HLJLgt}[1]{#1}
+
+
+\begin{document}
+
+\maketitle
+
+\rule{\textwidth}{1pt}
+\section{Subspace Inference Based Uncertainty Analysis for Deep Neural Networks}
+A non-linear system is generally modelled by using many methods , among them machine learning is the best method. In machine learning based system modelling, the machine learning algorithm generates model from known dataset called  as training data so that the system can predict output for any given input data. There are different models used in machine learning systems, Artificial neural networks (ANN) is a prominent method used in machine learning. and this method mimics biological neural networks. Similar to the real neuron, ANN model contains artificial neurons with parameters, this parameters are adjusted during training or learning process based on sample data for prediction.
+
+The Deep Neural Networks (DNN)  belongs to broader category of ANN with more hidden layers to extract more features from the training data which is capable to tackle more and more complex and challenging problems. During the  training, all parameters of DNN will be updated based on loss function, the trained DNN will be able to predict output similar to actual output for a certain input. However, the different DNN  training identifies slightly various DNN parameters for same scenarios, which results in causes uncertainty in the prediction.
+
+The uncertainty in DNN is can be generated using Bayesian inference and it helps to identify the parameter values, that generated likelihood prediction to the actual output.  This identification of uncertainties in deep learning models are called as Bayesian Neural Networks (BNN).
+
+\[
+P(A|B) = \frac{P(B|A)*P(A))}{P(B)}
+\]
+Bayesian inference is a method of statistical inference in which Bayes\ensuremath{\rq} theorem is used to update the probability for a posterior hypothesis as more evidence or information becomes available. Bayes inference derives posterior probability from the prior probability distributions and  from the  likelihood function that represents the system model. Bayesian inference computes the posterior probability  from the above given equation. In this equation the posterior probability  \texttt{P(A|B)} is proportional to the product of prior and the likelihood probability distribution. \texttt{P(A|B)} and \texttt{P(B|A)} is also called as conditional probability and \texttt{P(A)} and \texttt{P(B)} is called marginal probability. The calculation of \texttt{P(B)} is tedious process, therefore, approximate Bayesian inference is introduced. In approximate Bayesian inference, the posterior probability will be proportional to the product of prior probability distribution and the likelihood distribution. Similarly, the prior probability will be proportional to joint probability. The Markov Chain Monte Carlo (MCMC) methods or sing variational inference methods (VI) are used to sample the posterior distribution by considering the joint probability distribution.  The \href{https://github.com/TuringLang/Turing.jl}{Turing.jl} package in Julia supports Bayesian inference using MCMC methods like MH, HMC and NUTS, also this package supports ADVI inference too. The other packages like \href{https://github.com/TuringLang/AdvancedMH.jl}{AdvancedMH.jl} and \href{https://github.com/TuringLang/AdvancedHMC.jl}{AdvanceHMC.jl} are capable to generate  posterior samples using Metropolis Hastings and Hamiltonian Monte Carlo algorithm, respectively. Moreover, these algorithms can take input from user defined probability density functions for Bayesian inference. The Bayesian inference generates parameter samples within the uncertainty distribution and it is possible to identify the distribution of sample using statistical methods. The BNN parameters as a distribution is illustrated in figure below:
+
+\begin{figure}
+\centering
+\includegraphics{img/bnn.png}
+\caption{BNN}
+\end{figure}
+
+
+The drawback on BNN is the time to generate the inference, when  the number of parameters in the neural networks (NN )increases, the uncertainty generation of NN parameters using Bayesian concept become more expensive in terms of time.
+
+Subspace inference method introduced to reduce the inference time in BNN by constructing a smaller subspace of actual NN Parameter space. This subspace is generated from the  principle  components of the deviation matrix of weight updation during training.
+
+\subsubsection{Subspace Inference Algorithm}
+The subspace inference uses a pretrained DNN and it is implemented using following steps
+
+\begin{itemize}
+\item[1. ] Generate low dimensional subspace
+
+
+\item[2. ] Execute Bayesian inference within this subspace
+
+
+\item[3. ] Transform posterior of lower dimensional subspace to original dimension
+
+\end{itemize}
+\paragraph{Algorithm for subspace construction}
+The subspace of NN model parameters are constructed by following steps:
+
+\begin{itemize}
+\item[1. ] Initialize mean parameters to pretrained parameter value, $W_{swa} = W_0$
+
+
+\item[2. ] For every epoch $i$   2.1 Update parameter using SGD  2.2 Update mean parameters as  $Wswa = (n*W_{swa} + \frac{W_{i}}{n+1})$, where $n = i/f$. $f$ is the weight update frequency  2.3 Calculate parameter deviation, $W_{d} = W_{i}-W_{swa}$
+
+
+\item[3. ] Do principle component analysis
+
+
+\item[4. ] Generate projection matrix
+
+\end{itemize}
+\subsubsection{Improvements in Subspace Inference}
+The subspace inference implementation by \href{https://arxiv.org/abs/1907.07504}{Izamailov} consider the deviations of last $M$ (rank of PCA) columns. We have modified this algorithm by considering all deviation matrix during subspace construction to get more information about the subspace. Moreover, in \href{https://arxiv.org/abs/1907.07504}{Izamailov}'s work, the posterior of subspace is updated based on the prior distribution of subspace only. We modified to generate subspace samples based on weight distribution. The prior distribution is defined as function,  and it takes the  subspace as the input  and  throws NN parameters prior distribution as output which is defined in the below pseudo function:
+
+\begin{verbatim}
+function prior(z)
+    W = Wswa + Pz
+    return Normal(W,1.0)
+end
+\end{verbatim}
+The advanced MH and HMC algorithms help to take prior distribution as functions instead of distribution.
+
+The subspace inference method for NN is implemented as a package named \href{https://github.com/efmanu/SubspaceInference.jl}{SubspaceInference.jl} in Julia and it can be installed as below:
+
+
+\begin{lstlisting}
+(*@\HLJLk{using}@*) (*@\HLJLn{Pkg}@*)
+(*@\HLJLn{Pkg}@*)(*@\HLJLoB{.}@*)(*@\HLJLnf{add}@*)(*@\HLJLp{(}@*)(*@\HLJLs{"{}https://github.com/efmanu/SubspaceInference.jl"{}}@*)(*@\HLJLp{)}@*)
+\end{lstlisting}
+
+\subsubsection{Example for subspace inference for DNN}
+To implement this example, we use a multilayer perceptron with two input and one output  and three hidden layers. This example uses the data and the model from \href{https://github.com/wjmaddox/drbayes}{python implementation}. 
+
+The example implementation is started with using some packages.
+
+
+\begin{lstlisting}
+(*@\HLJLk{using}@*) (*@\HLJLn{NPZ}@*)
+(*@\HLJLk{using}@*) (*@\HLJLn{Plots}@*)
+(*@\HLJLk{using}@*) (*@\HLJLn{Flux}@*)
+(*@\HLJLk{using}@*) (*@\HLJLn{Flux}@*)(*@\HLJLoB{:}@*) (*@\HLJLn{Data}@*)(*@\HLJLoB{.}@*)(*@\HLJLn{DataLoader}@*)
+(*@\HLJLk{using}@*) (*@\HLJLn{Flux}@*)(*@\HLJLoB{:}@*) (*@\HLJLnd{@epochs}@*)
+(*@\HLJLk{using}@*) (*@\HLJLn{Plots}@*)
+(*@\HLJLk{using}@*) (*@\HLJLn{BSON}@*)(*@\HLJLoB{:}@*) (*@\HLJLnd{@save}@*)
+(*@\HLJLk{using}@*) (*@\HLJLn{BSON}@*)(*@\HLJLoB{:}@*) (*@\HLJLnd{@load}@*)
+(*@\HLJLk{using}@*) (*@\HLJLn{Zygote}@*)
+(*@\HLJLk{using}@*) (*@\HLJLn{Statistics}@*)
+(*@\HLJLk{using}@*) (*@\HLJLn{Revise}@*)
+(*@\HLJLk{using}@*) (*@\HLJLn{SubspaceInference}@*)(*@\HLJLp{;}@*)
+\end{lstlisting}
+
+The sample data is loaded from \texttt{.npy} file and contains two columns, one is taken as $x$ and other as $y$. The $x$ is converted to features using features function. Then zipped using DataLoader available with Flux and is plotted here.
+
+
+\begin{lstlisting}
+(*@\HLJLn{data{\_}ld}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{npzread}@*)(*@\HLJLp{(}@*)(*@\HLJLs{"{}data.npy"{}}@*)(*@\HLJLp{);}@*)
+(*@\HLJLn{x}@*)(*@\HLJLp{,}@*) (*@\HLJLn{y}@*) (*@\HLJLoB{=}@*) (*@\HLJLp{(}@*)(*@\HLJLn{data{\_}ld}@*)(*@\HLJLp{[}@*)(*@\HLJLoB{:}@*)(*@\HLJLp{,}@*) (*@\HLJLni{1}@*)(*@\HLJLp{]}@*)(*@\HLJLoB{{\textquotesingle}}@*)(*@\HLJLp{,}@*) (*@\HLJLn{data{\_}ld}@*)(*@\HLJLp{[}@*)(*@\HLJLoB{:}@*)(*@\HLJLp{,}@*) (*@\HLJLni{2}@*)(*@\HLJLp{]}@*)(*@\HLJLoB{{\textquotesingle}}@*)(*@\HLJLp{);}@*)
+(*@\HLJLk{function}@*) (*@\HLJLnf{features}@*)(*@\HLJLp{(}@*)(*@\HLJLn{x}@*)(*@\HLJLp{)}@*)
+    (*@\HLJLk{return}@*) (*@\HLJLnf{vcat}@*)(*@\HLJLp{(}@*)(*@\HLJLn{x}@*)(*@\HLJLoB{./}@*)(*@\HLJLni{2}@*)(*@\HLJLp{,}@*) (*@\HLJLp{(}@*)(*@\HLJLn{x}@*)(*@\HLJLoB{./}@*)(*@\HLJLni{2}@*)(*@\HLJLp{)}@*)(*@\HLJLoB{.{\textasciicircum}}@*)(*@\HLJLni{2}@*)(*@\HLJLp{)}@*)
+(*@\HLJLk{end}@*)
+
+(*@\HLJLn{f}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{features}@*)(*@\HLJLp{(}@*)(*@\HLJLn{x}@*)(*@\HLJLp{);}@*)
+(*@\HLJLn{data}@*) (*@\HLJLoB{=}@*)  (*@\HLJLnf{DataLoader}@*)(*@\HLJLp{(}@*)(*@\HLJLn{f}@*)(*@\HLJLp{,}@*)(*@\HLJLn{y}@*)(*@\HLJLp{,}@*) (*@\HLJLn{batchsize}@*)(*@\HLJLoB{=}@*)(*@\HLJLni{50}@*)(*@\HLJLp{,}@*) (*@\HLJLn{shuffle}@*)(*@\HLJLoB{=}@*)(*@\HLJLkc{true}@*)(*@\HLJLp{);}@*)
+
+(*@\HLJLcs{{\#}plot}@*) (*@\HLJLcs{data}@*)
+(*@\HLJLnf{scatter}@*)(*@\HLJLp{(}@*)(*@\HLJLn{data{\_}ld}@*)(*@\HLJLp{[}@*)(*@\HLJLoB{:}@*)(*@\HLJLp{,}@*)(*@\HLJLni{1}@*)(*@\HLJLp{],}@*)(*@\HLJLn{data{\_}ld}@*)(*@\HLJLp{[}@*)(*@\HLJLoB{:}@*)(*@\HLJLp{,}@*)(*@\HLJLni{2}@*)(*@\HLJLp{],}@*)(*@\HLJLn{color}@*)(*@\HLJLoB{=}@*)(*@\HLJLp{[}@*)(*@\HLJLs{"{}red"{}}@*)(*@\HLJLp{],}@*) (*@\HLJLn{title}@*)(*@\HLJLoB{=}@*)(*@\HLJLs{"{}Dataset"{}}@*)(*@\HLJLp{,}@*) (*@\HLJLn{legend}@*)(*@\HLJLoB{=}@*)(*@\HLJLkc{false}@*)(*@\HLJLp{)}@*)
+\end{lstlisting}
+
+\begin{figure}
+\centering
+\includegraphics{img/data_set.png}
+\caption{Dataset}
+\end{figure}
+
+
+\subsubsection{DNN Model setup}
+The simple multilayer perceptron is created as using Dense layer. This DNN contains 2 inputs, 1 output and hidden layers of $[200,50,50]$ size. All layers other than the output layer contains the ReLu activation function.
+
+
+\begin{lstlisting}
+(*@\HLJLn{m}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{Chain}@*)(*@\HLJLp{(}@*)
+    (*@\HLJLnf{Dense}@*)(*@\HLJLp{(}@*)(*@\HLJLni{2}@*)(*@\HLJLp{,}@*)(*@\HLJLni{200}@*)(*@\HLJLp{,}@*)(*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLn{relu}@*)(*@\HLJLp{),}@*) 
+    (*@\HLJLnf{Dense}@*)(*@\HLJLp{(}@*)(*@\HLJLni{200}@*)(*@\HLJLp{,}@*)(*@\HLJLni{50}@*)(*@\HLJLp{,}@*)(*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLn{relu}@*)(*@\HLJLp{),}@*)
+    (*@\HLJLnf{Dense}@*)(*@\HLJLp{(}@*)(*@\HLJLni{50}@*)(*@\HLJLp{,}@*)(*@\HLJLni{50}@*)(*@\HLJLp{,}@*)(*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLn{relu}@*)(*@\HLJLp{),}@*)
+    (*@\HLJLnf{Dense}@*)(*@\HLJLp{(}@*)(*@\HLJLni{50}@*)(*@\HLJLp{,}@*)(*@\HLJLni{50}@*)(*@\HLJLp{,}@*)(*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLn{relu}@*)(*@\HLJLp{),}@*)
+    (*@\HLJLnf{Dense}@*)(*@\HLJLp{(}@*)(*@\HLJLni{50}@*)(*@\HLJLp{,}@*)(*@\HLJLni{1}@*)(*@\HLJLp{),}@*)
+(*@\HLJLp{);}@*)
+
+(*@\HLJLn{\ensuremath{\theta}}@*)(*@\HLJLp{,}@*) (*@\HLJLn{re}@*) (*@\HLJLoB{=}@*) (*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLnf{destructure}@*)(*@\HLJLp{(}@*)(*@\HLJLn{m}@*)(*@\HLJLp{);}@*)
+
+(*@\HLJLnf{L}@*)(*@\HLJLp{(}@*)(*@\HLJLn{x}@*)(*@\HLJLp{,}@*) (*@\HLJLn{y}@*)(*@\HLJLp{)}@*) (*@\HLJLoB{=}@*) (*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLn{Losses}@*)(*@\HLJLoB{.}@*)(*@\HLJLnf{mse}@*)(*@\HLJLp{(}@*)(*@\HLJLnf{m}@*)(*@\HLJLp{(}@*)(*@\HLJLn{x}@*)(*@\HLJLp{),}@*) (*@\HLJLn{y}@*)(*@\HLJLp{)}@*)(*@\HLJLoB{/}@*)(*@\HLJLni{2}@*)(*@\HLJLp{;}@*)
+
+(*@\HLJLn{ps}@*) (*@\HLJLoB{=}@*) (*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLnf{params}@*)(*@\HLJLp{(}@*)(*@\HLJLn{m}@*)(*@\HLJLp{);}@*)
+
+(*@\HLJLn{opt}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{Momentum}@*)(*@\HLJLp{(}@*)(*@\HLJLnfB{0.01}@*)(*@\HLJLp{,}@*) (*@\HLJLnfB{0.95}@*)(*@\HLJLp{);}@*)
+(*@\HLJLnf{callback}@*)(*@\HLJLp{()}@*) (*@\HLJLoB{=}@*) (*@\HLJLnd{@show}@*)(*@\HLJLp{(}@*)(*@\HLJLnf{L}@*)(*@\HLJLp{(}@*)(*@\HLJLn{X}@*)(*@\HLJLp{,}@*)(*@\HLJLn{Y}@*)(*@\HLJLp{))}@*) (*@\HLJLcs{{\#}callback}@*) (*@\HLJLcs{function}@*)
+(*@\HLJLn{epochs}@*) (*@\HLJLoB{=}@*) (*@\HLJLni{3000}@*)
+(*@\HLJLk{for}@*) (*@\HLJLn{j}@*) (*@\HLJLkp{in}@*) (*@\HLJLni{1}@*)(*@\HLJLoB{:}@*)(*@\HLJLni{5}@*)
+   (*@\HLJLn{m}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{Chain}@*)(*@\HLJLp{(}@*)
+           (*@\HLJLnf{Dense}@*)(*@\HLJLp{(}@*)(*@\HLJLni{2}@*)(*@\HLJLp{,}@*)(*@\HLJLni{200}@*)(*@\HLJLp{,}@*)(*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLn{relu}@*)(*@\HLJLp{),}@*)
+           (*@\HLJLnf{Dense}@*)(*@\HLJLp{(}@*)(*@\HLJLni{200}@*)(*@\HLJLp{,}@*)(*@\HLJLni{50}@*)(*@\HLJLp{,}@*)(*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLn{relu}@*)(*@\HLJLp{),}@*)
+           (*@\HLJLnf{Dense}@*)(*@\HLJLp{(}@*)(*@\HLJLni{50}@*)(*@\HLJLp{,}@*)(*@\HLJLni{50}@*)(*@\HLJLp{,}@*)(*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLn{relu}@*)(*@\HLJLp{),}@*)
+           (*@\HLJLnf{Dense}@*)(*@\HLJLp{(}@*)(*@\HLJLni{50}@*)(*@\HLJLp{,}@*)(*@\HLJLni{50}@*)(*@\HLJLp{,}@*)(*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLn{relu}@*)(*@\HLJLp{),}@*)
+           (*@\HLJLnf{Dense}@*)(*@\HLJLp{(}@*)(*@\HLJLni{50}@*)(*@\HLJLp{,}@*)(*@\HLJLni{1}@*)(*@\HLJLp{),}@*)
+   (*@\HLJLp{)}@*)
+   (*@\HLJLn{ps}@*) (*@\HLJLoB{=}@*) (*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLnf{params}@*)(*@\HLJLp{(}@*)(*@\HLJLn{m}@*)(*@\HLJLp{)}@*)
+   (*@\HLJLnd{@epochs}@*) (*@\HLJLni{1}@*) (*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLnf{train!}@*)(*@\HLJLp{(}@*)(*@\HLJLn{L}@*)(*@\HLJLp{,}@*) (*@\HLJLn{ps}@*)(*@\HLJLp{,}@*) (*@\HLJLn{data{\_}ld}@*)(*@\HLJLp{,}@*) (*@\HLJLn{opt}@*)(*@\HLJLp{,}@*) (*@\HLJLn{cb}@*) (*@\HLJLoB{=}@*) (*@\HLJLp{()}@*) (*@\HLJLoB{->}@*) (*@\HLJLnf{callback}@*)(*@\HLJLp{())}@*) 
+   (*@\HLJLnd{@save}@*) (*@\HLJLs{"{}model{\_}weights{\_}}@*)(*@\HLJLsi{{\$}}@*)(*@\HLJLp{(}@*)(*@\HLJLn{j}@*)(*@\HLJLp{)}@*)(*@\HLJLs{.bson"{}}@*) (*@\HLJLn{ps}@*)
+(*@\HLJLk{end}@*)
+\end{lstlisting}
+
+This SGD solutions are used as the standard to compare the uncertainties generated by using subspace inference
+
+
+\begin{lstlisting}
+(*@\HLJLn{z}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{collect}@*)(*@\HLJLp{(}@*)(*@\HLJLnf{range}@*)(*@\HLJLp{(}@*)(*@\HLJLoB{-}@*)(*@\HLJLnfB{10.0}@*)(*@\HLJLp{,}@*) (*@\HLJLnfB{10.0}@*)(*@\HLJLp{,}@*)(*@\HLJLn{length}@*) (*@\HLJLoB{=}@*) (*@\HLJLni{100}@*)(*@\HLJLp{))}@*)
+(*@\HLJLn{inp}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{features}@*)(*@\HLJLp{(}@*)(*@\HLJLn{z}@*)(*@\HLJLoB{{\textquotesingle}}@*)(*@\HLJLp{)}@*)
+(*@\HLJLn{trajectories}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{Array}@*)(*@\HLJLp{{\{}}@*)(*@\HLJLn{Float64}@*)(*@\HLJLp{{\}}(}@*)(*@\HLJLn{undef}@*)(*@\HLJLp{,}@*)(*@\HLJLni{100}@*)(*@\HLJLp{,}@*)(*@\HLJLni{5}@*)(*@\HLJLp{)}@*)
+(*@\HLJLk{for}@*) (*@\HLJLn{i}@*) (*@\HLJLkp{in}@*) (*@\HLJLni{1}@*)(*@\HLJLoB{:}@*)(*@\HLJLni{5}@*)
+	(*@\HLJLnd{@load}@*) (*@\HLJLs{"{}model{\_}weights{\_}}@*)(*@\HLJLsi{{\$}}@*)(*@\HLJLp{(}@*)(*@\HLJLn{i}@*)(*@\HLJLp{)}@*)(*@\HLJLs{.bson"{}}@*) (*@\HLJLn{ps}@*)
+	(*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLnf{loadparams!}@*)(*@\HLJLp{(}@*)(*@\HLJLn{m}@*)(*@\HLJLp{,}@*) (*@\HLJLn{ps}@*)(*@\HLJLp{)}@*)
+	(*@\HLJLn{out}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{m}@*)(*@\HLJLp{(}@*)(*@\HLJLn{inp}@*)(*@\HLJLp{)}@*)
+	(*@\HLJLn{trajectories}@*)(*@\HLJLp{[}@*)(*@\HLJLoB{:}@*)(*@\HLJLp{,}@*) (*@\HLJLn{i}@*)(*@\HLJLp{]}@*) (*@\HLJLoB{=}@*) (*@\HLJLn{out}@*)(*@\HLJLoB{{\textquotesingle}}@*)
+(*@\HLJLk{end}@*)
+(*@\HLJLn{all{\_}trj}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{Dict}@*)(*@\HLJLp{()}@*)
+(*@\HLJLn{all{\_}trj}@*)(*@\HLJLp{[}@*)(*@\HLJLs{"{}1"{}}@*)(*@\HLJLp{]}@*) (*@\HLJLoB{=}@*) (*@\HLJLn{trajectories}@*)
+(*@\HLJLn{SubspaceInference}@*)(*@\HLJLoB{.}@*)(*@\HLJLnf{plot{\_}predictive}@*)(*@\HLJLp{(}@*)(*@\HLJLn{data{\_}ld}@*)(*@\HLJLp{,}@*) (*@\HLJLn{all{\_}trj}@*)(*@\HLJLp{,}@*) (*@\HLJLn{z}@*)(*@\HLJLp{,}@*) (*@\HLJLn{title}@*)(*@\HLJLoB{=}@*)(*@\HLJLp{[}@*)(*@\HLJLs{"{}SGD}@*) (*@\HLJLs{Solutions"{}}@*)(*@\HLJLp{])}@*)
+\end{lstlisting}
+
+\begin{figure}
+\centering
+\includegraphics{img/sgd_sol.png}
+\caption{SGD Solutions}
+\end{figure}
+
+
+\subsubsection{Subspace Inference}
+The subspace inference uses pretrained model to generate the uncertainty informations. 
+
+
+\begin{lstlisting}
+(*@\HLJLn{i}@*) (*@\HLJLoB{=}@*) (*@\HLJLni{1}@*)(*@\HLJLp{;}@*)
+(*@\HLJLnd{@load}@*) (*@\HLJLs{"{}model{\_}weights{\_}}@*)(*@\HLJLsi{{\$}}@*)(*@\HLJLp{(}@*)(*@\HLJLn{i}@*)(*@\HLJLp{)}@*)(*@\HLJLs{.bson"{}}@*) (*@\HLJLn{ps}@*)(*@\HLJLp{;}@*)
+(*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLnf{loadparams!}@*)(*@\HLJLp{(}@*)(*@\HLJLn{m}@*)(*@\HLJLp{,}@*) (*@\HLJLn{ps}@*)(*@\HLJLp{);}@*)
+
+(*@\HLJLn{M}@*) (*@\HLJLoB{=}@*) (*@\HLJLni{5}@*) (*@\HLJLcs{{\#}Rank}@*) (*@\HLJLcs{of}@*) (*@\HLJLcs{PCA}@*) (*@\HLJLcs{or}@*) (*@\HLJLcs{Maximum}@*) (*@\HLJLcs{columns}@*) (*@\HLJLcs{in}@*) (*@\HLJLcs{deviation}@*) (*@\HLJLcs{matrix}@*)
+(*@\HLJLn{T}@*) (*@\HLJLoB{=}@*) (*@\HLJLni{1}@*) (*@\HLJLcs{{\#}Steps}@*)
+(*@\HLJLn{itr}@*) (*@\HLJLoB{=}@*) (*@\HLJLni{100}@*)
+(*@\HLJLn{all{\_}chain}@*)(*@\HLJLp{,}@*) (*@\HLJLn{lp}@*)(*@\HLJLp{,}@*) (*@\HLJLn{W{\_}swa}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{subspace{\_}inference}@*)(*@\HLJLp{(}@*)(*@\HLJLn{m}@*)(*@\HLJLp{,}@*) (*@\HLJLn{L}@*)(*@\HLJLp{,}@*) (*@\HLJLn{data}@*)(*@\HLJLp{,}@*) (*@\HLJLn{opt}@*)(*@\HLJLp{,}@*)
+	(*@\HLJLn{\ensuremath{\sigma}{\_}z}@*) (*@\HLJLoB{=}@*) (*@\HLJLnfB{0.1}@*)(*@\HLJLp{,}@*)	(*@\HLJLn{itr}@*) (*@\HLJLoB{=}@*)(*@\HLJLn{itr}@*)(*@\HLJLp{,}@*) (*@\HLJLn{T}@*)(*@\HLJLoB{=}@*)(*@\HLJLn{T}@*)(*@\HLJLp{,}@*) (*@\HLJLn{c}@*)(*@\HLJLoB{=}@*)(*@\HLJLni{1}@*)(*@\HLJLp{,}@*) (*@\HLJLn{M}@*)(*@\HLJLoB{=}@*)(*@\HLJLn{M}@*)(*@\HLJLp{,}@*) (*@\HLJLn{print{\_}freq}@*)(*@\HLJLoB{=}@*)(*@\HLJLn{T}@*)(*@\HLJLp{,}@*) (*@\HLJLn{alg}@*) (*@\HLJLoB{=:}@*)(*@\HLJLn{rwmh}@*)(*@\HLJLp{);}@*)
+
+
+(*@\HLJLn{z}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{collect}@*)(*@\HLJLp{(}@*)(*@\HLJLnf{range}@*)(*@\HLJLp{(}@*)(*@\HLJLoB{-}@*)(*@\HLJLnfB{10.0}@*)(*@\HLJLp{,}@*) (*@\HLJLnfB{10.0}@*)(*@\HLJLp{,}@*)(*@\HLJLn{length}@*) (*@\HLJLoB{=}@*) (*@\HLJLni{100}@*)(*@\HLJLp{))}@*)
+(*@\HLJLn{inp}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{features}@*)(*@\HLJLp{(}@*)(*@\HLJLn{z}@*)(*@\HLJLoB{{\textquotesingle}}@*)(*@\HLJLp{)}@*)
+(*@\HLJLn{trajectories}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{Array}@*)(*@\HLJLp{{\{}}@*)(*@\HLJLn{Float64}@*)(*@\HLJLp{{\}}(}@*)(*@\HLJLn{undef}@*)(*@\HLJLp{,}@*)(*@\HLJLni{100}@*)(*@\HLJLp{,}@*)(*@\HLJLn{itr}@*)(*@\HLJLp{)}@*)
+(*@\HLJLk{for}@*) (*@\HLJLn{i}@*) (*@\HLJLkp{in}@*) (*@\HLJLni{1}@*)(*@\HLJLoB{:}@*)(*@\HLJLn{itr}@*)
+	(*@\HLJLn{m1}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{re}@*)(*@\HLJLp{(}@*)(*@\HLJLn{all{\_}chain}@*)(*@\HLJLp{[}@*)(*@\HLJLn{i}@*)(*@\HLJLp{])}@*)
+	(*@\HLJLn{out}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{m1}@*)(*@\HLJLp{(}@*)(*@\HLJLn{inp}@*)(*@\HLJLp{)}@*)
+	(*@\HLJLn{trajectories}@*)(*@\HLJLp{[}@*)(*@\HLJLoB{:}@*)(*@\HLJLp{,}@*) (*@\HLJLn{i}@*)(*@\HLJLp{]}@*) (*@\HLJLoB{=}@*) (*@\HLJLn{out}@*)(*@\HLJLoB{{\textquotesingle}}@*)
+(*@\HLJLk{end}@*)
+(*@\HLJLn{all{\_}trajectories}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{Dict}@*)(*@\HLJLp{()}@*)
+(*@\HLJLn{all{\_}trajectories}@*)(*@\HLJLp{[}@*)(*@\HLJLs{"{}1"{}}@*)(*@\HLJLp{]}@*) (*@\HLJLoB{=}@*) (*@\HLJLn{trajectories}@*)(*@\HLJLp{;}@*)
+
+(*@\HLJLn{SubspaceInference}@*)(*@\HLJLoB{.}@*)(*@\HLJLnf{plot{\_}predictive}@*)(*@\HLJLp{(}@*)(*@\HLJLn{data{\_}ld}@*)(*@\HLJLp{,}@*) (*@\HLJLn{all{\_}trajectories}@*)(*@\HLJLp{,}@*) (*@\HLJLn{title}@*)(*@\HLJLoB{=}@*)(*@\HLJLp{[}@*)(*@\HLJLs{"{}Plot"{}}@*)(*@\HLJLp{],}@*) (*@\HLJLn{z}@*)(*@\HLJLp{)}@*)
+\end{lstlisting}
+
+\begin{figure}
+\centering
+\includegraphics{img/sub_inference.png}
+\caption{Subspace Inference}
+\end{figure}
+
+
+\subsubsection{Effect of comparison of different subspace sizes}
+This simulation considers subspace size of 3,5 and 10.
+
+
+\begin{lstlisting}
+(*@\HLJLn{M}@*) (*@\HLJLoB{=}@*) (*@\HLJLp{[}@*)(*@\HLJLni{3}@*)(*@\HLJLp{,}@*) (*@\HLJLni{5}@*)(*@\HLJLp{,}@*) (*@\HLJLni{10}@*)(*@\HLJLp{,}@*) (*@\HLJLni{20}@*)(*@\HLJLp{]}@*) (*@\HLJLcs{{\#}Rank}@*) (*@\HLJLcs{of}@*) (*@\HLJLcs{PCA}@*) (*@\HLJLcs{or}@*) (*@\HLJLcs{Maximum}@*) (*@\HLJLcs{columns}@*) (*@\HLJLcs{in}@*) (*@\HLJLcs{deviation}@*) (*@\HLJLcs{matrix}@*)
+(*@\HLJLn{T}@*) (*@\HLJLoB{=}@*) (*@\HLJLni{5}@*) (*@\HLJLcs{{\#}Steps}@*)
+(*@\HLJLn{itr}@*) (*@\HLJLoB{=}@*) (*@\HLJLni{100}@*)
+(*@\HLJLn{all{\_}trajectories}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{Dict}@*)(*@\HLJLp{()}@*)
+(*@\HLJLn{z}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{collect}@*)(*@\HLJLp{(}@*)(*@\HLJLnf{range}@*)(*@\HLJLp{(}@*)(*@\HLJLoB{-}@*)(*@\HLJLnfB{10.0}@*)(*@\HLJLp{,}@*) (*@\HLJLnfB{10.0}@*)(*@\HLJLp{,}@*)(*@\HLJLn{length}@*) (*@\HLJLoB{=}@*) (*@\HLJLni{100}@*)(*@\HLJLp{))}@*)
+(*@\HLJLn{inp}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{features}@*)(*@\HLJLp{(}@*)(*@\HLJLn{z}@*)(*@\HLJLoB{{\textquotesingle}}@*)(*@\HLJLp{)}@*)
+(*@\HLJLk{for}@*) (*@\HLJLn{mi}@*) (*@\HLJLkp{in}@*) (*@\HLJLni{1}@*)(*@\HLJLoB{:}@*)(*@\HLJLni{4}@*)
+    (*@\HLJLn{i}@*) (*@\HLJLoB{=}@*) (*@\HLJLni{1}@*)(*@\HLJLp{;}@*)
+    (*@\HLJLnd{@load}@*) (*@\HLJLs{"{}model{\_}weights{\_}}@*)(*@\HLJLsi{{\$}}@*)(*@\HLJLp{(}@*)(*@\HLJLn{i}@*)(*@\HLJLp{)}@*)(*@\HLJLs{.bson"{}}@*) (*@\HLJLn{ps}@*)(*@\HLJLp{;}@*)
+    (*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLnf{loadparams!}@*)(*@\HLJLp{(}@*)(*@\HLJLn{m}@*)(*@\HLJLp{,}@*) (*@\HLJLn{ps}@*)(*@\HLJLp{);}@*)
+    (*@\HLJLn{all{\_}chain}@*)(*@\HLJLp{,}@*) (*@\HLJLn{lp}@*)(*@\HLJLp{,}@*) (*@\HLJLn{W{\_}swa}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{subspace{\_}inference}@*)(*@\HLJLp{(}@*)(*@\HLJLn{m}@*)(*@\HLJLp{,}@*) (*@\HLJLn{L}@*)(*@\HLJLp{,}@*) (*@\HLJLn{data}@*)(*@\HLJLp{,}@*) (*@\HLJLn{opt}@*)(*@\HLJLp{,}@*)
+	(*@\HLJLn{\ensuremath{\sigma}{\_}z}@*) (*@\HLJLoB{=}@*) (*@\HLJLnfB{1.0}@*)(*@\HLJLp{,}@*)	(*@\HLJLn{itr}@*) (*@\HLJLoB{=}@*)(*@\HLJLn{itr}@*)(*@\HLJLp{,}@*) (*@\HLJLn{T}@*)(*@\HLJLoB{=}@*)(*@\HLJLn{T}@*)(*@\HLJLp{,}@*) (*@\HLJLn{c}@*)(*@\HLJLoB{=}@*)(*@\HLJLni{1}@*)(*@\HLJLp{,}@*) (*@\HLJLn{M}@*)(*@\HLJLoB{=}@*)(*@\HLJLn{M}@*)(*@\HLJLp{[}@*)(*@\HLJLn{mi}@*)(*@\HLJLp{],}@*) (*@\HLJLn{print{\_}freq}@*)(*@\HLJLoB{=}@*)(*@\HLJLn{T}@*)(*@\HLJLp{,}@*) (*@\HLJLn{alg}@*) (*@\HLJLoB{=:}@*)(*@\HLJLn{rwmh}@*)(*@\HLJLp{);}@*)    
+    
+    (*@\HLJLn{trajectories}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{Array}@*)(*@\HLJLp{{\{}}@*)(*@\HLJLn{Float64}@*)(*@\HLJLp{{\}}(}@*)(*@\HLJLn{undef}@*)(*@\HLJLp{,}@*)(*@\HLJLni{100}@*)(*@\HLJLp{,}@*)(*@\HLJLn{itr}@*)(*@\HLJLp{)}@*)
+    (*@\HLJLk{for}@*) (*@\HLJLn{i}@*) (*@\HLJLkp{in}@*) (*@\HLJLni{1}@*)(*@\HLJLoB{:}@*)(*@\HLJLn{itr}@*)
+        (*@\HLJLn{m1}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{re}@*)(*@\HLJLp{(}@*)(*@\HLJLn{all{\_}chain}@*)(*@\HLJLp{[}@*)(*@\HLJLn{i}@*)(*@\HLJLp{])}@*)
+        (*@\HLJLn{out}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{m1}@*)(*@\HLJLp{(}@*)(*@\HLJLn{inp}@*)(*@\HLJLp{)}@*)
+        (*@\HLJLn{trajectories}@*)(*@\HLJLp{[}@*)(*@\HLJLoB{:}@*)(*@\HLJLp{,}@*) (*@\HLJLn{i}@*)(*@\HLJLp{]}@*) (*@\HLJLoB{=}@*) (*@\HLJLn{out}@*)(*@\HLJLoB{{\textquotesingle}}@*)
+    (*@\HLJLk{end}@*)
+    (*@\HLJLn{all{\_}trajectories}@*)(*@\HLJLp{[}@*)(*@\HLJLs{"{}}@*)(*@\HLJLsi{{\$}}@*)(*@\HLJLp{(}@*)(*@\HLJLn{mi}@*)(*@\HLJLp{)}@*)(*@\HLJLs{"{}}@*)(*@\HLJLp{]}@*) (*@\HLJLoB{=}@*) (*@\HLJLn{trajectories}@*)(*@\HLJLp{;}@*)
+(*@\HLJLk{end}@*)
+(*@\HLJLn{title}@*) (*@\HLJLoB{=}@*) (*@\HLJLp{[}@*)(*@\HLJLs{"{}subspace}@*) (*@\HLJLs{Size:}@*) (*@\HLJLs{3"{}}@*)(*@\HLJLp{,}@*)(*@\HLJLs{"{}subspace}@*) (*@\HLJLs{Size:}@*) (*@\HLJLs{5"{}}@*)(*@\HLJLp{,}@*)(*@\HLJLs{"{}subspace}@*) (*@\HLJLs{Size:}@*) (*@\HLJLs{10"{}}@*)(*@\HLJLp{,}@*)(*@\HLJLs{"{}subspace}@*) (*@\HLJLs{Size:}@*) (*@\HLJLs{20"{}}@*)(*@\HLJLp{]}@*)
+
+(*@\HLJLn{SubspaceInference}@*)(*@\HLJLoB{.}@*)(*@\HLJLnf{plot{\_}predictive}@*)(*@\HLJLp{(}@*)(*@\HLJLn{data{\_}ld}@*)(*@\HLJLp{,}@*) (*@\HLJLn{all{\_}trajectories}@*)(*@\HLJLp{,}@*) (*@\HLJLn{z}@*)(*@\HLJLp{,}@*) (*@\HLJLn{title}@*)(*@\HLJLoB{=}@*)(*@\HLJLn{title}@*)(*@\HLJLp{)}@*)
+\end{lstlisting}
+
+\begin{figure}
+\centering
+\includegraphics{img/com_diff_sub.png}
+\caption{Effect of different subspace sizes}
+\end{figure}
+
+
+\subsubsection{Effect of comparison of different proposal deviations}
+This simulation considers proposal deviations of \texttt{0.1} and \texttt{1.0}.
+
+
+\begin{lstlisting}
+(*@\HLJLn{M}@*) (*@\HLJLoB{=}@*) (*@\HLJLni{10}@*) (*@\HLJLcs{{\#}Rank}@*) (*@\HLJLcs{of}@*) (*@\HLJLcs{PCA}@*) (*@\HLJLcs{or}@*) (*@\HLJLcs{Maximum}@*) (*@\HLJLcs{columns}@*) (*@\HLJLcs{in}@*) (*@\HLJLcs{deviation}@*) (*@\HLJLcs{matrix}@*)
+(*@\HLJLn{T}@*) (*@\HLJLoB{=}@*) (*@\HLJLni{5}@*) (*@\HLJLcs{{\#}Steps}@*)
+(*@\HLJLn{itr}@*) (*@\HLJLoB{=}@*) (*@\HLJLni{100}@*)
+(*@\HLJLn{all{\_}trajectories}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{Dict}@*)(*@\HLJLp{()}@*)
+(*@\HLJLn{z}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{collect}@*)(*@\HLJLp{(}@*)(*@\HLJLnf{range}@*)(*@\HLJLp{(}@*)(*@\HLJLoB{-}@*)(*@\HLJLnfB{10.0}@*)(*@\HLJLp{,}@*) (*@\HLJLnfB{10.0}@*)(*@\HLJLp{,}@*)(*@\HLJLn{length}@*) (*@\HLJLoB{=}@*) (*@\HLJLni{100}@*)(*@\HLJLp{))}@*)
+(*@\HLJLn{inp}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{features}@*)(*@\HLJLp{(}@*)(*@\HLJLn{z}@*)(*@\HLJLoB{{\textquotesingle}}@*)(*@\HLJLp{)}@*)
+(*@\HLJLn{\ensuremath{\sigma}{\_}z}@*) (*@\HLJLoB{=}@*) (*@\HLJLp{[}@*)(*@\HLJLnfB{0.1}@*)(*@\HLJLp{,}@*) (*@\HLJLnfB{1.0}@*)(*@\HLJLp{]}@*)
+(*@\HLJLk{for}@*) (*@\HLJLn{mi}@*) (*@\HLJLkp{in}@*) (*@\HLJLni{1}@*)(*@\HLJLoB{:}@*)(*@\HLJLni{2}@*)
+    (*@\HLJLn{i}@*) (*@\HLJLoB{=}@*) (*@\HLJLni{1}@*)(*@\HLJLp{;}@*)
+    (*@\HLJLnd{@load}@*) (*@\HLJLs{"{}model{\_}weights{\_}}@*)(*@\HLJLsi{{\$}}@*)(*@\HLJLp{(}@*)(*@\HLJLn{i}@*)(*@\HLJLp{)}@*)(*@\HLJLs{.bson"{}}@*) (*@\HLJLn{ps}@*)(*@\HLJLp{;}@*)
+    (*@\HLJLn{Flux}@*)(*@\HLJLoB{.}@*)(*@\HLJLnf{loadparams!}@*)(*@\HLJLp{(}@*)(*@\HLJLn{m}@*)(*@\HLJLp{,}@*) (*@\HLJLn{ps}@*)(*@\HLJLp{);}@*)
+    (*@\HLJLn{all{\_}chain}@*)(*@\HLJLp{,}@*) (*@\HLJLn{lp}@*)(*@\HLJLp{,}@*) (*@\HLJLn{W{\_}swa}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{subspace{\_}inference}@*)(*@\HLJLp{(}@*)(*@\HLJLn{m}@*)(*@\HLJLp{,}@*) (*@\HLJLn{L}@*)(*@\HLJLp{,}@*) (*@\HLJLn{data}@*)(*@\HLJLp{,}@*) (*@\HLJLn{opt}@*)(*@\HLJLp{,}@*)
+	(*@\HLJLn{\ensuremath{\sigma}{\_}z}@*) (*@\HLJLoB{=}@*) (*@\HLJLn{\ensuremath{\sigma}{\_}z}@*)(*@\HLJLp{[}@*)(*@\HLJLn{mi}@*)(*@\HLJLp{],}@*)	(*@\HLJLn{itr}@*) (*@\HLJLoB{=}@*)(*@\HLJLn{itr}@*)(*@\HLJLp{,}@*) (*@\HLJLn{T}@*)(*@\HLJLoB{=}@*)(*@\HLJLn{T}@*)(*@\HLJLp{,}@*) (*@\HLJLn{c}@*)(*@\HLJLoB{=}@*)(*@\HLJLni{1}@*)(*@\HLJLp{,}@*) (*@\HLJLn{M}@*)(*@\HLJLoB{=}@*)(*@\HLJLn{M}@*)(*@\HLJLp{,}@*) (*@\HLJLn{print{\_}freq}@*)(*@\HLJLoB{=}@*)(*@\HLJLn{T}@*)(*@\HLJLp{,}@*) (*@\HLJLn{alg}@*) (*@\HLJLoB{=:}@*)(*@\HLJLn{rwmh}@*)(*@\HLJLp{);}@*)    
+    
+    (*@\HLJLn{trajectories}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{Array}@*)(*@\HLJLp{{\{}}@*)(*@\HLJLn{Float64}@*)(*@\HLJLp{{\}}(}@*)(*@\HLJLn{undef}@*)(*@\HLJLp{,}@*)(*@\HLJLni{100}@*)(*@\HLJLp{,}@*)(*@\HLJLn{itr}@*)(*@\HLJLp{)}@*)
+    (*@\HLJLk{for}@*) (*@\HLJLn{i}@*) (*@\HLJLkp{in}@*) (*@\HLJLni{1}@*)(*@\HLJLoB{:}@*)(*@\HLJLn{itr}@*)
+        (*@\HLJLn{m1}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{re}@*)(*@\HLJLp{(}@*)(*@\HLJLn{all{\_}chain}@*)(*@\HLJLp{[}@*)(*@\HLJLn{i}@*)(*@\HLJLp{])}@*)
+        (*@\HLJLn{out}@*) (*@\HLJLoB{=}@*) (*@\HLJLnf{m1}@*)(*@\HLJLp{(}@*)(*@\HLJLn{inp}@*)(*@\HLJLp{)}@*)
+        (*@\HLJLn{trajectories}@*)(*@\HLJLp{[}@*)(*@\HLJLoB{:}@*)(*@\HLJLp{,}@*) (*@\HLJLn{i}@*)(*@\HLJLp{]}@*) (*@\HLJLoB{=}@*) (*@\HLJLn{out}@*)(*@\HLJLoB{{\textquotesingle}}@*)
+    (*@\HLJLk{end}@*)
+    (*@\HLJLn{all{\_}trajectories}@*)(*@\HLJLp{[}@*)(*@\HLJLs{"{}}@*)(*@\HLJLsi{{\$}}@*)(*@\HLJLp{(}@*)(*@\HLJLn{mi}@*)(*@\HLJLp{)}@*)(*@\HLJLs{"{}}@*)(*@\HLJLp{]}@*) (*@\HLJLoB{=}@*) (*@\HLJLn{trajectories}@*)(*@\HLJLp{;}@*)
+(*@\HLJLk{end}@*)
+(*@\HLJLn{title}@*) (*@\HLJLoB{=}@*) (*@\HLJLp{[}@*)(*@\HLJLs{"{}Std:}@*) (*@\HLJLs{0.1"{}}@*)(*@\HLJLp{,}@*) (*@\HLJLs{"{}Std:}@*) (*@\HLJLs{1.0"{}}@*)(*@\HLJLp{]}@*)
+
+(*@\HLJLn{SubspaceInference}@*)(*@\HLJLoB{.}@*)(*@\HLJLnf{plot{\_}predictive}@*)(*@\HLJLp{(}@*)(*@\HLJLn{data{\_}ld}@*)(*@\HLJLp{,}@*) (*@\HLJLn{all{\_}trajectories}@*)(*@\HLJLp{,}@*) (*@\HLJLn{z}@*)(*@\HLJLp{,}@*) (*@\HLJLn{title}@*)(*@\HLJLoB{=}@*)(*@\HLJLn{title}@*)(*@\HLJLp{)}@*)
+\end{lstlisting}
+
+\begin{figure}
+\centering
+\includegraphics{img/st_comp_sub.png}
+\caption{Effect of different proposal standard deviations}
+\end{figure}
+
+
+\subsubsection{Diffusion Map based subspace Construction}
+The subspace is constructed in above experiments by using dimensionality reduction techniques named Principle Component Analysis(PCA). This method is simple to implement however, it fails with many real-world datasets have non-linear characteristics. Therefore diffusion map is introduced in subspace construction to consider the non-linearity in dimensionality reduction.
+
+\subsubsection{Autoencoder based subspace construction}
+Similar to diffusion maps, autoencoder is also a dimensionality reduction method that accounts nonlinearity in neural ODE parameters. Moreover, this technique is  based on machine learning. 
+
+
+
+\end{document}

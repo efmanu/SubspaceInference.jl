@@ -293,7 +293,7 @@ The plot of variable 1 against variable 2 for subspace of 3 with 1.0 proposal di
 
 
 ![Variable 1 solution vs variable 2](img/var_1_2.png)
-![Prediction and Forecasting](single_plot_forecasting.png)
+![Prediction and Forecasting](img/single_plot_forecasting.png)
 
 This package provides `NUTS, RWMH and MALA` algorithm based Bayesian inferences.
 
