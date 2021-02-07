@@ -60,7 +60,7 @@ using Plots
 plot(sol)
 @
 
-![Lokta - Volterra ODE solution](https://github.com/efmanu/SubspaceInference.jl/tree/admhSubspace/Examples/img/lokta.png)
+![Lokta - Volterra ODE solution](img/lokta.png)
 
 Sometimes we won’t have exact knowledge of complete structure of non linear system to model using ODE’s
 This case we  use Neural ODE’s to model the non linear system and to solve simply like training of Neural Network.
@@ -100,7 +100,7 @@ scatter(t,ode_data[1,:],label="data")
 scatter!(t,pred[1,:],label="prediction")
 @
 
-![Neural ODE solution before training](https://github.com/efmanu/SubspaceInference.jl/tree/admhSubspace/Examples/img/node_before.png)
+![Neural ODE solution before training](img/node_before.png)
 
 Now we can start training the Neural ODE.
 
@@ -127,7 +127,7 @@ Flux.train!(loss_n_ode, ps, data, opt, cb = cb)
 @
 
 The solution from trained ODE is as below:
-![Neural ODE solution after training](https://github.com/efmanu/SubspaceInference.jl/tree/admhSubspace/Examples/img/final_node.png)
+![Neural ODE solution after training](img/final_node.png)
 
 ### Importance of subspace inference in Neural ODE?
 
@@ -203,7 +203,7 @@ fig.show();
 
 The Figure 4 illustrates  the different solutions for spiral ODE.
 
-![Solution of ODE with noise](https://github.com/efmanu/SubspaceInference.jl/tree/admhSubspace/Examples/img/ode_noise.png)
+![Solution of ODE with noise](img/ode_noise.png)
 
 The subspace inference methods use pretrained neural ODE and it is set up and trained as below:
 
@@ -249,7 +249,7 @@ fig.show()
 
 
 
-![Predicted solution](https://github.com/efmanu/SubspaceInference.jl/tree/admhSubspace/Examples/img/n_ode_trained.png)
+![Predicted solution](img/n_ode_trained.png)
 
 
 
@@ -294,14 +294,14 @@ SubspaceInference.plot_node(t, all_trajectories, ode_data_bkp, ode_data, 2, data
 
 The uncertainties in solution is plotted for two variables in Figure 6 and 7
 
-![Uncertainty in var 1 solution](https://github.com/efmanu/SubspaceInference.jl/tree/admhSubspace/Examples/img/inference_var1.png)
-![Uncertainty in var 2 solution](https://github.com/efmanu/SubspaceInference.jl/tree/admhSubspace/Examples/img/inference_var2.png)
+![Uncertainty in var 1 solution](img/inference_var1.png)
+![Uncertainty in var 2 solution](img/inference_var2.png)
 
 The plot of variable 1 against variable 2 for subspace of 3 with 1.0 proposal distribution is Illustrated  in the Figure 8. The Figure 9 discuss the uncertainties in predictions as well as in forecasting.
 
 
-![Variable 1 solution vs variable 2](https://github.com/efmanu/SubspaceInference.jl/tree/admhSubspace/Examples/img/var_1_2.png)
-![Prediction and Forecasting](https://github.com/efmanu/SubspaceInference.jl/tree/admhSubspace/Examples/img/single_plot_forecasting.png)
+![Variable 1 solution vs variable 2](img/var_1_2.png)
+![Prediction and Forecasting](single_plot_forecasting.png)
 
 This package provides `NUTS, RWMH and MALA` algorithm based Bayesian inferences.
 
