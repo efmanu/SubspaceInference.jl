@@ -26,7 +26,7 @@ Bayesian inference is a method of statistical inference in which Bayes’ theore
 Monte Carlo (MCMC) methods or sing variational inference methods (VI) are used to sample the posterior distribution by considering the joint probability distribution.
  The [Turing.jl](https://github.com/TuringLang/Turing.jl) package in Julia supports Bayesian inference using MCMC methods like MH, HMC and NUTS, also this package supports ADVI inference too. The other packages like [AdvancedMH.jl](https://github.com/TuringLang/AdvancedMH.jl) and [AdvanceHMC.jl](https://github.com/TuringLang/AdvancedHMC.jl) are capable to generate  posterior samples using Metropolis Hastings and Hamiltonian Monte Carlo algorithm, respectively. Moreover, these algorithms can take input from user defined probability density functions for Bayesian inference. The Bayesian inference generates parameter samples within the uncertainty distribution and it is possible to identify the distribution of sample using statistical methods. The BNN parameters as a distribution is illustrated in figure below:
 
-![BNN](img/bnn.png)
+![BNN](https://github.com/efmanu/SubspaceInference.jl/tree/admhSubspace/Examples/img/bnn.png)
 
 The drawback on BNN is the time to generate the inference, when  the number of parameters in the neural networks (NN )increases, the uncertainty generation of NN parameters using Bayesian concept become more expensive in terms of time.
 
@@ -104,7 +104,7 @@ data =  DataLoader(f,y, batchsize=50, shuffle=true);
 scatter(data_ld[:,1],data_ld[:,2],color=["red"], title="Dataset", legend=false)
 
 ```
-![Dataset](img/data_set.png)
+![Dataset](https://github.com/efmanu/SubspaceInference.jl/tree/admhSubspace/Examples/img/data_set.png)
 
 ### DNN Model setup
 The simple multilayer perceptron is created as using Dense layer. This DNN contains 2 inputs, 1 output and hidden layers of $[200,50,50]$ size. All layers other than the output layer contains the ReLu activation function.
@@ -156,7 +156,7 @@ all_trj = Dict()
 all_trj["1"] = trajectories
 SubspaceInference.plot_predictive(data_ld, all_trj, z, title=["SGD Solutions"])
 ```
-![SGD Solutions](img/sgd_sol.png)
+![SGD Solutions](https://github.com/efmanu/SubspaceInference.jl/tree/admhSubspace/Examples/img/sgd_sol.png)
 
 ### Subspace Inference
 The subspace inference uses pretrained model to generate the uncertainty informations. 
@@ -186,7 +186,7 @@ all_trajectories["1"] = trajectories;
 
 SubspaceInference.plot_predictive(data_ld, all_trajectories, title=["Plot"], z)
 ```
-![Subspace Inference](img/sub_inference.png)
+![Subspace Inference](https://github.com/efmanu/SubspaceInference.jl/tree/admhSubspace/Examples/img/sub_inference.png)
 
 ### Effect of comparison of different subspace sizes
 This simulation considers subspace size of 3,5 and 10.
@@ -219,7 +219,7 @@ title = ["subspace Size: 3","subspace Size: 5","subspace Size: 10","subspace Siz
 
 SubspaceInference.plot_predictive(data_ld, all_trajectories, z, title=title)
 ```
-![Effect of different subspace sizes](img/com_diff_sub.png)
+![Effect of different subspace sizes](https://github.com/efmanu/SubspaceInference.jl/tree/admhSubspace/Examples/img/com_diff_sub.png)
 
 ### Effect of comparison of different proposal deviations
 This simulation considers proposal deviations of `0.1` and `1.0`.
@@ -251,7 +251,7 @@ title = ["Std: 0.1", "Std: 1.0"]
 
 SubspaceInference.plot_predictive(data_ld, all_trajectories, z, title=title)
 ```
-![Effect of different proposal standard deviations](img/st_comp_sub.png)
+![Effect of different proposal standard deviations](https://github.com/efmanu/SubspaceInference.jl/tree/admhSubspace/Examples/img/st_comp_sub.png)
 
 ### Diffusion Map based subspace Construction
 The subspace is constructed in above experiments by using dimensionality reduction techniques named Principle Component Analysis(PCA). This method is simple to implement however, it fails with many real-world datasets have non-linear characteristics. Therefore diffusion map is introduced in subspace construction to consider the non-linearity in dimensionality reduction.
