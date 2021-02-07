@@ -56,6 +56,18 @@ git-tree-sha1 = "f87e559f87a45bece9c9ed97458d3afe98b1ebb9"
 uuid = "ec485272-7323-5ecc-a04f-4719b315124d"
 version = "0.1.0"
 
+[[Arpack]]
+deps = ["Arpack_jll", "Libdl", "LinearAlgebra"]
+git-tree-sha1 = "2ff92b71ba1747c5fdd541f8fc87736d82f40ec9"
+uuid = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
+version = "0.4.0"
+
+[[Arpack_jll]]
+deps = ["Libdl", "OpenBLAS_jll", "Pkg"]
+git-tree-sha1 = "e214a9b9bd1b4e1b4f15b22c0994862b66af7ff7"
+uuid = "68821587-b530-5797-8361-c406ea357684"
+version = "3.5.0+3"
+
 [[ArrayInterface]]
 deps = ["LinearAlgebra", "Requires", "SparseArrays"]
 git-tree-sha1 = "a2a1884863704e0414f6f164a1f6f4a2a62faf4e"
@@ -670,6 +682,12 @@ git-tree-sha1 = "6a8a2a625ab0dea913aba95c11370589e0239ff0"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 version = "0.5.6"
 
+[[ManifoldLearning]]
+deps = ["Combinatorics", "LightGraphs", "LinearAlgebra", "MultivariateStats", "SimpleWeightedGraphs", "SparseArrays", "Statistics", "StatsBase"]
+git-tree-sha1 = "805b02692ac2574764927ddac857c4f7da312253"
+uuid = "06eb3307-b2af-5a2a-abea-d33192699d32"
+version = "0.6.1"
+
 [[Markdown]]
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
@@ -724,6 +742,12 @@ deps = ["DiffEqBase", "FiniteDiff", "ForwardDiff", "LinearAlgebra", "OrdinaryDif
 git-tree-sha1 = "258f3be6770fe77be8870727ba9803e236c685b8"
 uuid = "f9640e96-87f6-5992-9c3b-0743c6a49ffa"
 version = "1.8.1"
+
+[[MultivariateStats]]
+deps = ["Arpack", "LinearAlgebra", "SparseArrays", "Statistics", "StatsBase"]
+git-tree-sha1 = "352fae519b447bf52e6de627b89f448bcd469e4e"
+uuid = "6f286f6a-111f-5878-ab1e-185364afe411"
+version = "0.7.0"
 
 [[NLSolversBase]]
 deps = ["DiffResults", "Distributed", "FiniteDiff", "ForwardDiff"]
@@ -1030,6 +1054,12 @@ deps = ["InteractiveUtils", "MacroTools"]
 git-tree-sha1 = "daf7aec3fe3acb2131388f93a4c409b8c7f62226"
 uuid = "699a6c99-e7fa-54fc-8d76-47d257e15c1d"
 version = "0.9.3"
+
+[[SimpleWeightedGraphs]]
+deps = ["LightGraphs", "LinearAlgebra", "Markdown", "SparseArrays", "Test"]
+git-tree-sha1 = "f3f7396c2d5e9d4752357894889a87340262f904"
+uuid = "47aef6b3-ad0c-573a-a1e2-d07658019622"
+version = "1.1.1"
 
 [[Sobol]]
 deps = ["DelimitedFiles", "Random"]

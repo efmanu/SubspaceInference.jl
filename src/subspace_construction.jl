@@ -93,8 +93,6 @@ function auto_encoder_subspace(model, cost, data, opt, encoder, decoder; T = 10,
 			end
 		end
 	end
-	# (in_data, out_data) = split_data(data)
-	# (e,f) = size(in_data)
 
 	re_weight = reshape(A, all_len, :)
 
