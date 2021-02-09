@@ -8,7 +8,6 @@ using Flux: @epochs
 
 using LinearAlgebra
 using LowRankApprox
-using Zygote
 using Statistics
 using PyPlot
 using Distributions
@@ -20,6 +19,7 @@ using DifferentialEquations
 using DiffResults
 using StructArrays
 using ManifoldLearning
+using LazyArrays, Memoization, Turing, DistributionsAD
 
 ###########
 # Exports #

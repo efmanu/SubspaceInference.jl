@@ -32,7 +32,7 @@ To generate the uncertainty in machine learing models using MH Sampler from subs
 """
 function subspace_inference(model, cost, data, opt;
 	σ_z = 1.0,	σ_m = 1.0, σ_p = 1.0,
-	itr =1000, T=25, c=1, M=20, print_freq=1, alg =:hmc, backend = Zygote, method = :subspace)
+	itr =1000, T=25, c=1, M=20, print_freq=1, alg =:rwmh, backend = Zygote, method = :subspace)
 	#create subspace P
 	if method == :subspace
 		W_swa, P = subspace_construction(model, cost, data, opt;T = T, c = c, M = M, print_freq = print_freq)
@@ -41,34 +41,42 @@ function subspace_inference(model, cost, data, opt;
 	else
 		throw("Error: No method found")
 	end
-	chn, lp = inference(model, data, W_swa, P; σ_z = σ_z,
+	if (alg == :turing_mh) || (alg == :turing_nuts)
+		chn, lp = turing_inference(model, data, W_swa, P; σ_z = σ_z,
+			σ_m = σ_m, σ_p = σ_p, itr=itr, M = M, alg = alg,
+			backend = backend)
+	else
+		chn, lp = inference(model, data, W_swa, P; σ_z = σ_z,
 		σ_m = σ_m, σ_p = σ_p, itr=itr, M = M, alg = alg,
 		backend = backend)
+	end
 	return chn, lp, W_swa
 end
 
 #function to calculate norm
 sqnorm(x) = sum(abs2, x)
-function inference(m, data, W_swa, P; σ_z = 1.0,
-	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3, alg = :hmc,
+function inference(in_model, data, W_swa, P; σ_z = 1.0,
+	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3, alg = :rwmh,
 	backend = Zygote)
 	#extract model parameters
-	ps = Flux.params(m)
+	ps = Flux.params(in_model)
 	#split data as input and output
 	(in_data, out_data) = split_data(data)
 	(e,f) = size(in_data)
 	function density(z) 
 		new_W = W_swa + P*z
-		new_model = model_re(m, new_W)
-		if m isa Chain
+		new_model = model_re(in_model, new_W)
+		if in_model isa Chain
 			return logpdf(MvNormal(vec(new_model(in_data)), σ_m), vec(out_data)) 
 			+ logpdf(MvNormal(zeros(length(new_W)), σ_p), new_W)
-		else
+		elseif in_model isa NeuralODE
 			mlogpdf = 0
 			for p in 1:f
 				mlogpdf -= sqnorm(new_model(vec(in_data[:,p])) - reshape(out_data[:,p], :,2)')
 			end	
 			return mlogpdf - sqnorm(new_W)
+		else
+			throw("Error: density function is not avaliable for this model")
 		end
 	end
 	
@@ -193,3 +201,32 @@ function auto_inference(m, data, decoder; σ_z = 1.0,
 		throw("$alg is not available")
 	end
 end
+
+
+function turing_inference(m, data, W_swa, P; σ_z = 1.0,
+	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3, alg = :turing_mh,
+	backend = Zygote)
+	(in_data, out_data) = split_data(data)
+	@model infer(m, W_swa, P, in_data, out_data, M,
+		σ_p, σ_m, ::Type{T}=Float64) where {T} = begin
+		#prior Z
+		z ~ MvNormal(zeros(M), σ_p)
+		W_til = W_swa + P*z
+		new_model = model_re(m,W_til)
+		pred = Array(new_model(in_data))
+
+		obs = DistributionsAD.lazyarray(Normal, copy(pred), σ_m)
+		out_data ~ arraydist(obs)
+	end
+
+	model = infer(m, W_swa, P, in_data, out_data, M, σ_p, σ_m)
+	if alg == :turing_mh
+		chn = sample(model, MH(), itr)
+	elseif alg == :turing_nuts
+		chn = sample(model, NUTS(0.65), itr)
+	else
+		throw("Error: No sampler found")
+	end	
+	return chn, chn["lp"]
+end
+

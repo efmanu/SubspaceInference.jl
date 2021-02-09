@@ -28,7 +28,7 @@ function plot_predictive(data, trajectories, xs; μ=0, σ=0, title=["Plot"], leg
 		fig.show()
 	end		
 end
-
+#To plot uncertainites of Neural ODE for each variables
 function plot_node(t, trajectories, data, data_w_noise, n_vars, datasize, title; mean_fit = nothing)
 	lt = length(trajectories)
 
@@ -178,6 +178,7 @@ function variableplot_single_node(trajectories, data_train, data_forcast, data_t
 	f_axes.set_ylabel("var 2")
 	fig.show()
 end
+#To plot predictions
 function plot_pred(t, n_ode, ode_data_bkp, datasize, u0)
 	(fig, f_axes) = PyPlot.subplots(ncols=1, nrows=1)
 	pred = n_ode(vec(u0[:,1])) # Get the prediction using the correct initial condition
@@ -186,7 +187,7 @@ function plot_pred(t, n_ode, ode_data_bkp, datasize, u0)
 	f_axes.legend()
 	fig.show()
 end
-
+#To plot NeuralODE based forecasting
 function plot_forecast(u0, t, nt, tspan, new_node, ode_data_bkp, 
 	ode_data_bkp_f, datasize)
 	locs =  findall(x->x>=tspan[2], nt)

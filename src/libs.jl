@@ -28,9 +28,11 @@ function model_re(model,W)
 		new_model = NeuralODE(dudt,model.tspan,model.args[1],
 			saveat=model.kwargs[:saveat],
 				reltol=model.kwargs[:reltol],abstol=model.kwargs[:abstol])
-	else
+	elseif model isa Chain
 		θ, re = Flux.destructure(model)
 		new_model = re(W)
+	else
+		throw("Error: model_re function is not available for this model")
 	end
 	return new_model
 end
