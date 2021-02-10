@@ -46,7 +46,7 @@ function subspace_inference(model, cost, data, opt;
 			σ_m = σ_m, σ_p = σ_p, itr=itr, M = M, alg = alg,
 			backend = backend)
 	else
-		chn, lp = inference(model, data, W_swa, P; σ_z = σ_z,
+		chn, lp = sub_inference(model, data, W_swa, P; σ_z = σ_z,
 		σ_m = σ_m, σ_p = σ_p, itr=itr, M = M, alg = alg,
 		backend = backend)
 	end
@@ -54,8 +54,8 @@ function subspace_inference(model, cost, data, opt;
 end
 
 #function to calculate norm
-sqnorm(x) = sum(abs2, x)
-function inference(in_model, data, W_swa, P; σ_z = 1.0,
+
+function sub_inference(in_model, data, W_swa, P; σ_z = 1.0,
 	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3, alg = :rwmh,
 	backend = Zygote)
 	#extract model parameters
@@ -80,7 +80,7 @@ function inference(in_model, data, W_swa, P; σ_z = 1.0,
 		end
 	end
 	
-
+	ℓπ_grad(θ) = return (density(θ), ReverseDiff.gradient(density, θ))
 	if alg == :rwmh
 		#sampling using rwmh
 		#define proposal distribution
@@ -108,12 +108,12 @@ function inference(in_model, data, W_swa, P; σ_z = 1.0,
 
 		metric = DiagEuclideanMetric(M)
 
-		hamiltonian = Hamiltonian(metric, density, backend)
+		hamiltonian = Hamiltonian(metric, density, ℓπ_grad)
 
 		initial_ϵ = find_good_stepsize(hamiltonian, initial_θ)
 		integrator = Leapfrog(initial_ϵ)
 
-		proposal = NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator)
+		proposal =  AdvancedHMC.NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator)
 		adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
 
 		samples, stats = sample(hamiltonian, proposal, initial_θ, n_samples, adaptor, n_adapts; progress=true)
@@ -126,16 +126,18 @@ end
 function autoencoder_inference(model, cost, data, opt, encoder, decoder;
 	σ_z = 1.0,	σ_m = 1.0, σ_p = 1.0,
 	itr =1000, T=25, c=1, M=20, print_freq=1, alg =:hmc, backend = Zygote)
-	decoder = auto_encoder_subspace(model, cost, data, opt, encoder, decoder; T = T, c = c, M = M, print_freq = print_freq
+	W_swa, decoder = auto_encoder_subspace(model, cost, data, opt, encoder, decoder; 
+		T = T, c = c, M = M, print_freq = print_freq
 	)
 
-	chn, lp = auto_inference(model, data, decoder; σ_z = σ_z,
+	chn, lp = auto_inference(model, data, decoder, W_swa; σ_z = σ_z,
 	σ_m = σ_m, σ_p = σ_p, itr=itr, M = M, alg = alg,
 	backend = backend)
 	return chn, lp
 
 end
-function auto_inference(m, data, decoder; σ_z = 1.0,
+
+function auto_inference(m, data, decoder, W_swa; σ_z = 1.0,
 	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3, alg = :hmc,
 	backend = Zygote)
 	#extract model parameters
@@ -144,12 +146,12 @@ function auto_inference(m, data, decoder; σ_z = 1.0,
 	(in_data, out_data) = split_data(data)
 	(e,f) = size(in_data)
 	function density(z) 
-		new_W = decoder(z)
+		new_W = W_swa + decoder(z)
 		new_model = model_re(m, new_W)
 		if m isa Chain
 			return logpdf(MvNormal(vec(new_model(in_data)), σ_m), vec(out_data)) 
 			+ logpdf(MvNormal(zeros(length(new_W)), σ_p), new_W)
-		else
+		else			
 			mlogpdf = 0
 			for p in 1:f
 				mlogpdf -= sqnorm(new_model(vec(in_data[:,p])) - reshape(out_data[:,p], :,2)')
@@ -157,8 +159,8 @@ function auto_inference(m, data, decoder; σ_z = 1.0,
 			return mlogpdf - sqnorm(new_W)
 		end
 	end
-	
-
+	# global g_density = density
+	ℓπ_grad(θ) = return (density(θ), ReverseDiff.gradient(density, θ))
 	if alg == :rwmh
 		#sampling using rwmh
 		#define proposal distribution
@@ -169,7 +171,7 @@ function auto_inference(m, data, decoder; σ_z = 1.0,
 		#sample
 		chm = sample(model, spl, itr)
 		#format subspace samples as weight samples
-		return map(z->decoder(z.params), chm), map(z->z.lp, chm)
+		return map(z->(W_swa + decoder(z.params)), chm), map(z->z.lp, chm)
 	elseif alg == :mala
 		#sampling using mala
 		model = DensityModel(density)
@@ -177,8 +179,8 @@ function auto_inference(m, data, decoder; σ_z = 1.0,
 		#sample
 		chm = sample(model, spl, itr;init_params=rand(MvNormal(zeros(M), σ_z)))
 		#format subspace samples as weight samples
-		return map(z->decoder(z.params), chm), map(z->z.lp, chm)
-	elseif alg == :hmc
+		return map(z->(W_swa + decoder(z.params)), chm), map(z->z.lp, chm)
+	elseif alg == :nuts
 		#sampling using NUTS
 		# initial_θ = zeros(M)
 		initial_θ = rand(MvNormal(zeros(M),σ_z))
@@ -191,12 +193,31 @@ function auto_inference(m, data, decoder; σ_z = 1.0,
 		initial_ϵ = find_good_stepsize(hamiltonian, initial_θ)
 		integrator = Leapfrog(initial_ϵ)
 
-		proposal = NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator)
-		adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
+		proposal = AdvancedHMC.NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator)
+		adaptor = AdvancedHMC.StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
 
 		samples, stats = sample(hamiltonian, proposal, initial_θ, n_samples, adaptor, n_adapts; progress=true)
 		#format subspace samples as weight samples
-		return map(z->decoder(z.params), samples), map(z->z.log_density, stats)
+		return map(z->(W_swa +decoder(z.params)), samples), map(z->z.log_density, stats)
+	elseif alg == :hmc
+		#sampling using NUTS
+		# initial_θ = zeros(M)
+		initial_θ = rand(MvNormal(zeros(M),σ_z))
+		n_samples, n_adapts = itr, Int(round(itr/2))
+
+		metric = DiagEuclideanMetric(M)
+
+		hamiltonian = Hamiltonian(metric, density, ℓπ_grad)
+
+		initial_ϵ = AdvancedHMC.find_good_stepsize(hamiltonian, initial_θ)
+		integrator = Leapfrog(initial_ϵ)
+		#n_steps = 1
+		proposal = AdvancedHMC.StaticTrajectory(integrator, 1)
+		adaptor = AdvancedHMC.StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
+
+		samples, stats = sample(hamiltonian, proposal, initial_θ, n_samples, adaptor, n_adapts; progress=true)
+		#format subspace samples as weight samples
+		return map(z->(W_swa +decoder(z)), samples), map(z->z.log_density, stats)
 	else
 		throw("$alg is not available")
 	end

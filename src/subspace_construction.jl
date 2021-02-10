@@ -88,28 +88,37 @@ function auto_encoder_subspace(model, cost, data, opt, encoder, decoder; T = 10,
 			end			
 			Flux.update!(opt, ps, gs)
 			if mod(i,c) == 0
-				W = SubspaceInference.extract_params(ps)
-				append!(A, W)
-			end
+				W = extract_params(ps)
+				n = i/c
+				W_swa = (n.*W_swa + W)./(n+1)
+				W_dev =  W - W_swa
+				append!(A, W_dev)
+			end			
+		end		
+		#print loss based o print frequency
+		if (mod(i,print_freq) == 0 )|| (i == T)
+			println("Traing loss: ", training_loss," Epoch: ", i)
 		end
 	end
 
 	re_weight = reshape(A, all_len, :)
-
+	re_weight = re_weight[:,(end-100):end]
 	# model
 	sae = Chain(encoder,decoder)
+	autops = Flux.params(sae);
 	# loss
-	autoloss(X) = Flux.mse(sae(X), X)
+	autoloss(X) = Flux.mse(sae(X), X) 
+	+ sum(sqnorm, autops)
 	
 	# optimization
 	opt = ADAM()
 	# parameters
-	autops = Flux.params(sae);
+	
 	cb() = @show autoloss(re_weight)
 	#data
-	wdata = DataLoader(re_weight)
+	wdata = DataLoader(re_weight, batchsize = 5, shuffle = true)
 	Flux.train!(autoloss, autops, wdata, opt; cb=cb)
-	return decoder
+	return W_swa, decoder
 
 end
 function diffusion_subspace(model, cost, data, opt; T = 10, c = 1, M = 3, print_freq = 1

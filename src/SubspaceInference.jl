@@ -13,7 +13,7 @@ using PyPlot
 using Distributions
 using AdvancedMH
 using MCMCChains
-using AdvancedHMC, ForwardDiff, Zygote
+using AdvancedHMC, ForwardDiff, Zygote, ReverseDiff
 using DiffEqFlux
 using DifferentialEquations
 using DiffResults

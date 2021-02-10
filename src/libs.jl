@@ -1,7 +1,7 @@
 function extract_weights(model)
 	return Flux.destructure(model)
 end
-
+sqnorm(x) = sum(abs2, x)
 function cyclic_LR(epoch, total_epochs; lr_init=0.01, lr_ratio=0.05)
 	t = (epoch + 1) / total_epochs
 
@@ -22,12 +22,13 @@ function extract_params(ps)
 end
 
 function model_re(model,W)
-	if model isa NeuralODE
+	if model isa NeuralODE		
 		θ, re = Flux.destructure(model.model)
-		dudt = re(W)
+		dudt = re(W)		
 		new_model = NeuralODE(dudt,model.tspan,model.args[1],
 			saveat=model.kwargs[:saveat],
-				reltol=model.kwargs[:reltol],abstol=model.kwargs[:abstol])
+				reltol=model.kwargs[:reltol],abstol=model.kwargs[:abstol]
+		)
 	elseif model isa Chain
 		θ, re = Flux.destructure(model)
 		new_model = re(W)

@@ -312,3 +312,7 @@ SubspaceInference.plot_predictive(data_ld, all_trajectories, z, title=title)
 
 The above figure shows that for `σ_z = 1.0` generates larger uncertainty and it is not fitting mean prediction(blue line) with actual data.
 
+### Autoencoder based subspace inference
+
+[Autoencoders](https://towardsdatascience.com/applied-deep-learning-part-3-autoencoders-1c083af4d798) are a special type of aritifical neural networks where the input is the same as the output. In this work, the encoder part of auto encoder is used to generate 
+
