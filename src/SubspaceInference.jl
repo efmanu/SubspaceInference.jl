@@ -11,9 +11,9 @@ using LowRankApprox
 using Statistics
 using PyPlot
 using Distributions
-using AdvancedMH
+using AdvancedMH, AdvancedHMC, AdvancedVI
 using MCMCChains
-using AdvancedHMC, ForwardDiff, Zygote, ReverseDiff
+using ForwardDiff, Zygote, ReverseDiff
 using DiffEqFlux
 using DifferentialEquations
 using DiffResults

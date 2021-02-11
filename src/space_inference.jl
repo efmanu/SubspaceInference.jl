@@ -79,7 +79,7 @@ function sub_inference(in_model, data, W_swa, P; σ_z = 1.0,
 			throw("Error: density function is not avaliable for this model")
 		end
 	end
-	
+	global g_density = density
 	ℓπ_grad(θ) = return (density(θ), ReverseDiff.gradient(density, θ))
 	if alg == :rwmh
 		#sampling using rwmh
@@ -92,6 +92,19 @@ function sub_inference(in_model, data, W_swa, P; σ_z = 1.0,
 		chm = sample(model, spl, itr)
 		#format subspace samples as weight samples
 		return map(z->(W_swa + P*z.params), chm), map(z->z.lp, chm)
+	elseif alg == :advi
+		#sampling using advi
+		#define proposal distribution
+		proposal = MvNormal(zeros(2M),σ_z)
+
+		getq(θ) = TuringDiagMvNormal(θ[1:M], exp.(θ[(M+1):2M]))
+
+		advi = ADVI(10, itr)
+
+		q = vi(density, advi, getq, rand(proposal))
+		#format subspace samples as weight samples
+		new_chm = slicematrix(rand(q, itr))
+		return map(z->(W_swa + P*z), new_chm), zeros(itr)
 	elseif alg == :mala
 		#sampling using mala
 		model = DensityModel(density)

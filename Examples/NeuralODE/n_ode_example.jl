@@ -40,8 +40,8 @@ fig.show();
 
 dudt = Chain(x -> x.^3, Dense(2,15,tanh),
              Dense(15,2))
-n_ode = NeuralODE(dudt,tspan,Tsit5(),saveat=t,
-	reltol=1e-7,abstol=1e-9);
+n_ode = NeuralODE(dudt,Float32.(tspan),Tsit5(),saveat=Float32.(t),
+	reltol=Float32(1e-7),abstol=Float32(1e-9));
 
 ps = Flux.params(n_ode);
 
@@ -77,27 +77,28 @@ f_axes.plot(t,vec(pred[1,:]), c="green", marker=".", label ="prediction")
 f_axes.legend()
 fig.show()
 
+@load "n_ode_weights_30r.bson" ps;
+Flux.loadparams!(n_ode, ps);
+pred = n_ode(vec(u0[:,1]));
 L1(m, x, y) = sum(abs2, m(vec(x)) .- reshape(y[:,1], :,2)')+sum(sqnorm, Flux.params(m))/100;
 
 T = 1
-M = 5
+M = 20
 itr = 100
-σ_z = 1.0
-alg = :hmc
+σ_z = 0.1
+alg = :advi
 all_trajectories = Dict()
-
-@load "n_ode_weights_30r.bson" ps;
-Flux.loadparams!(n_ode, ps);
 
 #do subspace inference
 chn, lp, W_swa = SubspaceInference.subspace_inference(n_ode, L1, data, opt;
-	σ_z = σ_z, itr =itr, T=T, M=M,  alg =:hmc);
+	σ_z = σ_z, itr =itr, T=T, M=M,  alg =alg);
 
-ns = length(chn)
+n_chn = chn[100:end]
+ns = length(n_chn)
 
 trajectories = Array{Float64}(undef,2*datasize,ns)
 for i in 1:ns
-  new_model = SubspaceInference.model_re(n_ode, chn[i])
+  new_model = SubspaceInference.model_re(n_ode, n_chn[i])
   out = new_model(u0[:,1])
   reshape(Array(out)',:,1)
   trajectories[:, i] = reshape(Array(out)',:,1)
@@ -105,7 +106,7 @@ end
 
 all_trajectories[1] = trajectories
 
-title = ["Subspace Size:5"]
+title = ["Subspace Size:$M"]
 
 SubspaceInference.plot_node(t, all_trajectories, ode_data_bkp, ode_data, 2, datasize, title)
 
