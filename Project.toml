@@ -6,6 +6,7 @@ version = "0.1.0"
 [deps]
 AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d"
 AdvancedMH = "5b7e9947-ddc0-4b3f-9b55-0d8042f74170"
+AdvancedVI = "b5ca4192-6429-45e5-a2d9-87aec30a685c"
 DiffEqFlux = "aae7a2af-3d4f-5e19-a356-7da93b79d9d0"
 DiffResults = "163ba53b-c6d8-5494-b064-1a9d43ac40c5"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
