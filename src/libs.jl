@@ -20,14 +20,28 @@ function extract_params(ps)
 	
 	return mapreduce(i -> vec(ps.order.data[i]), vcat, 1:ps.params.dict.count)
 end
-
+function getbackend(backend)
+	if backend == :forwarddiff
+		adbackend = ForwardDiff
+	elseif backend == :reversediff
+		adbackend = ReverseDiff
+	elseif backend == :zygote
+		adbackend = Zygote
+	else
+		throw("Error: No backend found")
+	end
+	return adbackend
+end
 function model_re(model,W)
 	if model isa NeuralODE		
 		θ, re = Flux.destructure(model.model)
-		dudt = re(W)		
-		new_model = NeuralODE(dudt,model.tspan,model.args[1],
-			saveat=model.kwargs[:saveat],
-				reltol=model.kwargs[:reltol],abstol=model.kwargs[:abstol]
+		dudt = re(W)
+		kwargs = Dict()
+		for k in keys(model.kwargs)
+			kwargs[k] = model.kwargs[k]
+		end		
+		new_model = NeuralODE(dudt,model.tspan,model.args[1];
+			kwargs...
 		)
 	elseif model isa Chain
 		θ, re = Flux.destructure(model)
@@ -41,9 +55,9 @@ end
 #to convert matrix to array of vectors (row wise)
 function slicematrix(A::AbstractMatrix{T}) where T
    m, n = size(A)
-   B = Vector{T}[Vector{T}(undef, n) for _ in 1:m]
-   for i in 1:m
-       B[i] .= A[i, :]
+   B = Vector{T}[Vector{T}(undef, m) for _ in 1:n]
+   for i in 1:n
+       B[i] .= A[:,i]
    end
    return B
 end
@@ -59,4 +73,15 @@ generate_model(w_til, re) = re(w_til)
 function predict_out(w_til, re, in_data)
 	new_model = generate_model(w_til, re)
 	return new_model(in_data)
+end
+
+function form_matrix(A)
+	m,n, p = size(A)
+	datan = [vec(A[:,i,:]') for i in 1:n]
+	fdata = Array{Float64}(undef, 2p, n)
+	#convert ODE solution as matrix
+	for j in 1:n
+		fdata[:,j] = datan[j]
+	end
+	return fdata
 end

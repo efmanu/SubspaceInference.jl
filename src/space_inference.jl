@@ -21,7 +21,7 @@ To generate the uncertainty in machine learing models using MH Sampler from subs
 - `c`			: Moment update frequency. Eg: c = 1
 - `M`			: Maximum number of columns in deviation matrix. Eg: M= 3
 - `alg`			: Sampling Algorithm. Eg: :hmc 
-- `backend`		: Differentiation backend. Eg: Zygote
+- `backend`		: Differentiation backend. Eg: :forwarddiff
 
 # Output
 
@@ -32,7 +32,7 @@ To generate the uncertainty in machine learing models using MH Sampler from subs
 """
 function subspace_inference(model, cost, data, opt;
 	σ_z = 1.0,	σ_m = 1.0, σ_p = 1.0,
-	itr =1000, T=25, c=1, M=20, print_freq=1, alg =:rwmh, backend = Zygote, method = :subspace)
+	itr =1000, T=25, c=1, M=20, print_freq=1, alg =:rwmh, backend = :forwarddiff, method = :subspace)
 	#create subspace P
 	if method == :subspace
 		W_swa, P = subspace_construction(model, cost, data, opt;T = T, c = c, M = M, print_freq = print_freq)
@@ -57,7 +57,7 @@ end
 
 function sub_inference(in_model, data, W_swa, P; σ_z = 1.0,
 	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3, alg = :rwmh,
-	backend = Zygote)
+	backend = :forwarddiff)
 	#extract model parameters
 	ps = Flux.params(in_model)
 	#split data as input and output
@@ -79,17 +79,24 @@ function sub_inference(in_model, data, W_swa, P; σ_z = 1.0,
 			throw("Error: density function is not avaliable for this model")
 		end
 	end
-	global g_density = density
-	ℓπ_grad(θ) = return (density(θ), ReverseDiff.gradient(density, θ))
-	if alg == :rwmh
+	
+	ℓπ_grad(θ) = return (density(θ), getbackend(backend).gradient(density, θ))
+	if (alg == :rwmh) || (alg == :mala)
 		#sampling using rwmh
 		#define proposal distribution
-		proposal = MvNormal(zeros(M),σ_z)
-
 		model = DensityModel(density)
-		spl = RWMH(proposal)
-		#sample
-		chm = sample(model, spl, itr)
+		if (alg == :rwmh)
+			proposal = MvNormal(zeros(M),σ_z)
+			spl = RWMH(proposal)
+			#sample
+			chm = sample(model, spl, itr)
+		elseif (alg == :mala)
+			spl = MALA(x -> MvNormal((σ_z^2 / 2) .* x, σ_z))
+			#sample
+			chm = sample(model, spl, itr;init_params=rand(MvNormal(zeros(M), σ_z)))
+		else
+			throw("Error: No sampler found")
+		end
 		#format subspace samples as weight samples
 		return map(z->(W_swa + P*z.params), chm), map(z->z.lp, chm)
 	elseif alg == :advi
@@ -101,21 +108,11 @@ function sub_inference(in_model, data, W_swa, P; σ_z = 1.0,
 
 		advi = ADVI(10, itr)
 
-		q = vi(density, advi, getq, rand(proposal))
+		q = AdvancedVI.vi(density, advi, getq, rand(proposal))
 		#format subspace samples as weight samples
 		new_chm = slicematrix(rand(q, itr))
 		return map(z->(W_swa + P*z), new_chm), zeros(itr)
-	elseif alg == :mala
-		#sampling using mala
-		model = DensityModel(density)
-		spl = MALA(x -> MvNormal((σ_z^2 / 2) .* x, σ_z))
-		#sample
-		chm = sample(model, spl, itr;init_params=rand(MvNormal(zeros(M), σ_z)))
-		#format subspace samples as weight samples
-		return map(z->(W_swa + P*z.params), chm), map(z->z.lp, chm)
-	elseif alg == :hmc
-		#sampling using NUTS
-		# initial_θ = zeros(M)
+	elseif (alg == :hmc) || (alg == :nuts)
 		initial_θ = rand(MvNormal(zeros(M),σ_z))
 		n_samples, n_adapts = itr, Int(round(itr/2))
 
@@ -125,8 +122,13 @@ function sub_inference(in_model, data, W_swa, P; σ_z = 1.0,
 
 		initial_ϵ = find_good_stepsize(hamiltonian, initial_θ)
 		integrator = Leapfrog(initial_ϵ)
-
-		proposal =  AdvancedHMC.NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator)
+		if (alg == :hmc)
+			proposal = AdvancedHMC.StaticTrajectory(integrator, 1)
+		elseif (alg == :nuts)
+			proposal =  AdvancedHMC.NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator)
+		else
+			throw("Error: No sampler found")
+		end
 		adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
 
 		samples, stats = sample(hamiltonian, proposal, initial_θ, n_samples, adaptor, n_adapts; progress=true)
@@ -138,7 +140,7 @@ function sub_inference(in_model, data, W_swa, P; σ_z = 1.0,
 end
 function autoencoder_inference(model, cost, data, opt, encoder, decoder;
 	σ_z = 1.0,	σ_m = 1.0, σ_p = 1.0,
-	itr =1000, T=25, c=1, M=20, print_freq=1, alg =:hmc, backend = Zygote)
+	itr =1000, T=25, c=1, M=20, print_freq=1, alg =:hmc, backend = :forwarddiff)
 	W_swa, decoder = auto_encoder_subspace(model, cost, data, opt, encoder, decoder; 
 		T = T, c = c, M = M, print_freq = print_freq
 	)
@@ -152,7 +154,7 @@ end
 
 function auto_inference(m, data, decoder, W_swa; σ_z = 1.0,
 	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3, alg = :hmc,
-	backend = Zygote)
+	backend = :forwarddiff)
 	#extract model parameters
 	ps = Flux.params(m)
 	#split data as input and output
@@ -172,60 +174,56 @@ function auto_inference(m, data, decoder, W_swa; σ_z = 1.0,
 			return mlogpdf - sqnorm(new_W)
 		end
 	end
-	# global g_density = density
-	ℓπ_grad(θ) = return (density(θ), ReverseDiff.gradient(density, θ))
-	if alg == :rwmh
+	ℓπ_grad_a(θ) = return (density(θ), getbackend(backend).gradient(density, θ))
+	if (alg == :rwmh) || (alg == :mala)
 		#sampling using rwmh
 		#define proposal distribution
-		proposal = MvNormal(zeros(M),σ_z)
+		model = DensityModel(density)
+		if (alg == :rwmh)
+			proposal = MvNormal(zeros(M),σ_z)
+			spl = RWMH(proposal)
+			#sample
+			chm = sample(model, spl, itr)
+		elseif (alg == :mala)
+			spl = MALA(x -> MvNormal((σ_z^2 / 2) .* x, σ_z))
+			chm = sample(model, spl, itr;init_params=rand(MvNormal(zeros(M), σ_z)))
+		else
+			throw("Error: No sampler found")
+		end
+		
+		#format subspace samples as weight samples
+		return map(z->(W_swa + decoder(z.params)), chm), map(z->z.lp, chm)
+	elseif alg == :advi
+		#sampling using advi
+		#define proposal distribution
+		proposal = MvNormal(zeros(2M),σ_z)
 
-		model = DensityModel(density)
-		spl = RWMH(proposal)
-		#sample
-		chm = sample(model, spl, itr)
+		getq(θ) = TuringDiagMvNormal(θ[1:M], exp.(θ[(M+1):2M]))
+
+		advi = ADVI(10, itr)
+
+		q = AdvancedVI.vi(density, advi, getq, rand(proposal))
 		#format subspace samples as weight samples
-		return map(z->(W_swa + decoder(z.params)), chm), map(z->z.lp, chm)
-	elseif alg == :mala
-		#sampling using mala
-		model = DensityModel(density)
-		spl = MALA(x -> MvNormal((σ_z^2 / 2) .* x, σ_z))
-		#sample
-		chm = sample(model, spl, itr;init_params=rand(MvNormal(zeros(M), σ_z)))
-		#format subspace samples as weight samples
-		return map(z->(W_swa + decoder(z.params)), chm), map(z->z.lp, chm)
-	elseif alg == :nuts
-		#sampling using NUTS
-		# initial_θ = zeros(M)
+		new_chm = slicematrix(rand(q, itr))
+		return map(z->(W_swa + decoder(z)), new_chm), zeros(itr)
+	elseif (alg == :nuts) || (alg == :hmc)
 		initial_θ = rand(MvNormal(zeros(M),σ_z))
 		n_samples, n_adapts = itr, Int(round(itr/2))
 
 		metric = DiagEuclideanMetric(M)
 
-		hamiltonian = Hamiltonian(metric, density, backend)
+		hamiltonian = Hamiltonian(metric, density, ℓπ_grad_a)
 
 		initial_ϵ = find_good_stepsize(hamiltonian, initial_θ)
 		integrator = Leapfrog(initial_ϵ)
-
-		proposal = AdvancedHMC.NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator)
-		adaptor = AdvancedHMC.StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
-
-		samples, stats = sample(hamiltonian, proposal, initial_θ, n_samples, adaptor, n_adapts; progress=true)
-		#format subspace samples as weight samples
-		return map(z->(W_swa +decoder(z.params)), samples), map(z->z.log_density, stats)
-	elseif alg == :hmc
-		#sampling using NUTS
-		# initial_θ = zeros(M)
-		initial_θ = rand(MvNormal(zeros(M),σ_z))
-		n_samples, n_adapts = itr, Int(round(itr/2))
-
-		metric = DiagEuclideanMetric(M)
-
-		hamiltonian = Hamiltonian(metric, density, ℓπ_grad)
-
-		initial_ϵ = AdvancedHMC.find_good_stepsize(hamiltonian, initial_θ)
-		integrator = Leapfrog(initial_ϵ)
-		#n_steps = 1
-		proposal = AdvancedHMC.StaticTrajectory(integrator, 1)
+		if alg == :hmc
+			proposal = AdvancedHMC.StaticTrajectory(integrator, 1)
+		elseif alg == :nuts
+			proposal = AdvancedHMC.NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator)
+		else
+			throw("Error: No sampler found")
+		end
+		
 		adaptor = AdvancedHMC.StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
 
 		samples, stats = sample(hamiltonian, proposal, initial_θ, n_samples, adaptor, n_adapts; progress=true)
@@ -239,7 +237,7 @@ end
 
 function turing_inference(m, data, W_swa, P; σ_z = 1.0,
 	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3, alg = :turing_mh,
-	backend = Zygote)
+	backend = :forwarddiff)
 	(in_data, out_data) = split_data(data)
 	@model infer(m, W_swa, P, in_data, out_data, M,
 		σ_p, σ_m, ::Type{T}=Float64) where {T} = begin
@@ -247,7 +245,11 @@ function turing_inference(m, data, W_swa, P; σ_z = 1.0,
 		z ~ MvNormal(zeros(M), σ_p)
 		W_til = W_swa + P*z
 		new_model = model_re(m,W_til)
-		pred = Array(new_model(in_data))
+		if model isa Chain
+			pred = Array(new_model(in_data))
+		else
+			pred = form_matrix(Array(new_model(in_data)))
+		end
 
 		obs = DistributionsAD.lazyarray(Normal, copy(pred), σ_m)
 		out_data ~ arraydist(obs)
@@ -255,9 +257,9 @@ function turing_inference(m, data, W_swa, P; σ_z = 1.0,
 
 	model = infer(m, W_swa, P, in_data, out_data, M, σ_p, σ_m)
 	if alg == :turing_mh
-		chn = sample(model, MH(), itr)
+		chn = sample(model, Turing.MH(), itr)
 	elseif alg == :turing_nuts
-		chn = sample(model, NUTS(0.65), itr)
+		chn = sample(model, Turing.NUTS(0.65), itr)
 	else
 		throw("Error: No sampler found")
 	end	

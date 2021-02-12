@@ -102,7 +102,6 @@ function auto_encoder_subspace(model, cost, data, opt, encoder, decoder; T = 10,
 	end
 
 	re_weight = reshape(A, all_len, :)
-	re_weight = re_weight[:,(end-100):end]
 	# model
 	sae = Chain(encoder,decoder)
 	autops = Flux.params(sae);
