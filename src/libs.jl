@@ -33,16 +33,25 @@ function getbackend(backend)
 	return adbackend
 end
 function model_re(model,W)
-	if model isa NeuralODE		
-		θ, re = Flux.destructure(model.model)
-		dudt = re(W)
-		kwargs = Dict()
-		for k in keys(model.kwargs)
-			kwargs[k] = model.kwargs[k]
-		end		
-		new_model = NeuralODE(dudt,model.tspan,model.args[1];
-			kwargs...
-		)
+	if model isa NeuralODE	
+		if (model.model isa Chain)	
+			θ, re = Flux.destructure(model.model)
+			dudt = re(W)
+			kwargs = Dict()
+			for k in keys(model.kwargs)
+				kwargs[k] = model.kwargs[k]
+			end		
+			new_model = NeuralODE(dudt,model.tspan,model.args[1];
+				kwargs...
+			)
+		elseif model.model isa FastChain
+			ps3 = Flux.params(model)
+			ps3.order.data[1] = typeof(ps3.order.data[1])(W)
+			Flux.loadparams!(model, ps3)
+			new_model = model
+		else
+			throw("Error: This NN model type is not found")
+		end
 	elseif model isa Chain
 		θ, re = Flux.destructure(model)
 		new_model = re(W)
