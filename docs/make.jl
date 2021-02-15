@@ -13,3 +13,7 @@ makedocs(
         "Neural ODE Example" => "node_example.md",
     ]
 )
+
+deploydocs(
+    repo = "github.com/efmanu/SubspaceInference.jl.git",
+)
