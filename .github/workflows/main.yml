@@ -14,9 +14,9 @@ jobs:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@latest
         with:
-          version: '1.4'
+          version: '1.5.2'
       - name: Install dependencies
-        run: julia --project=docs/ -e 'using Pkg; Pkg.develop("Documenter"); ENV["PYTHON"]="/usr/bin/python3"; Pkg.add("PyCall"); Pkg.build("PyCall"); Pkg.add("PyPlot"); Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+        run: julia --project=docs/ -e 'using Pkg; Pkg.develop("Documenter"); ENV["PYTHON"]="/usr/bin/python3"; Pkg.add("PyCall"); Pkg.build("PyCall"); using PyCall; pyimport_conda("matplotlib", PKG); Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       - name: Build and deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # For authentication with GitHub Actions token
