@@ -1,0 +1,24 @@
+name: Documentation
+
+on:
+  push:
+    branches:
+      - gh-pages
+    tags: '*'
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@latest
+        with:
+          version: '1.5.2'
+      - name: Install dependencies
+        run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+      - name: Build and deploy
+        env:
+          GITHUB_TOKEN: 6d850d3c4488cb4fdff2a24c1f8f55eab05a1583 # For authentication with GitHub Actions token
+          DOCUMENTER_KEY: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDSVZlqvxoOX4yehC9NyB7cUP1M0fQYH3eAobS3ob0+VgKLLAHNl1JcFdoUgy4bj6nDpODo9wrh5VkSs1hvEhSj7OY1LwOFdVgMl5HF9aMnZJKYP7U3QBRrzGnISAOBH1h4YY9mcn1clYgcb0oGIcDC/5deKeTWIXTHE1dZ+joJrHKe4DFvVHIj+MuFJf4RgfP7XP4gg5mSeQ+Tp1uM6wdnvT+OMIh+n2iPTWwJQ3gVrvBYXbKHOYwfSwxwa1bwHay+vxPh2MkWUCR7JbMZkRAPKQBW/kKDD5Pr+tY5PlBlXgCRqcgwkBwtUE8Lm3c90GVjnj+FWh3QA7GLgKzLneFD+plZaG9pc6rb4T62uSDlUlwMU3f4dCVBUB1VSxuRIx/Njf88G1E8QAz3mBeKEtkXWa3IpMqbroZyYfHSyIe4dWTiyYGJ/Q7UJozuU8aABZx5LHEzmp6Cr84uoMQjaxs6UGm/F78x6MGPkStoTLK4fQrI9Ljp539Ob3dH3Xcb2/k= Documenter # For authentication with SSH deploy key
+        run: julia --project=docs/ docs/make.jl
