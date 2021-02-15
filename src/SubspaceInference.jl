@@ -24,7 +24,14 @@ using LazyArrays, Memoization, Turing, DistributionsAD
 ###########
 # Exports #
 ###########
-export  subspace_construction,subspace_inference, inference
+export  subspace_construction,
+		auto_encoder_subspace,
+		diffusion_subspace,
+		subspace_inference,
+		sub_inference,
+		autoencoder_inference,
+		auto_inference,
+		turing_inference
 
 #include functions
 include("plotting.jl")

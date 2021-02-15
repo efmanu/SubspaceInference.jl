@@ -1,9 +1,8 @@
 
 """
-    subspace_inference(model, cost, data, opt; callback =()->(return 0),
-		σ_z = 1.0,	σ_m = 1.0, σ_p = 1.0,
-		itr =1000, T=25, c=1, M=20, print_freq=1, alg =:hmc, backend = :zygote
-	)
+    subspace_inference(model, cost, data, opt;σ_z = 1.0, σ_m = 1.0, σ_p = 1.0,
+	itr =1000, T=25, c=1, M=20, print_freq=1, alg =:rwmh, backend = :forwarddiff, method = :subspace)
+
 To generate the uncertainty in machine learing models using MH Sampler from subspace
 
 # Input Arguments
@@ -20,15 +19,16 @@ To generate the uncertainty in machine learing models using MH Sampler from subs
 - `T`			: Number of steps for subspace calculation. Eg: T= 1
 - `c`			: Moment update frequency. Eg: c = 1
 - `M`			: Maximum number of columns in deviation matrix. Eg: M= 3
-- `alg`			: Sampling Algorithm. Eg: :hmc 
+- `alg`			: Sampling Algorithm. Eg: :rwmh 
 - `backend`		: Differentiation backend. Eg: :forwarddiff
+- `method` 		: Subspace construction method. Eg: :subspace
+- `print_freq`: Loss printing frequency
 
 # Output
 
 - `chn`			: Chain with samples with uncertainty informations
 - `lp`			: Log probabilities of all samples
 - `W_swa`		: Mean Weight
-- `re`			: Model reformatting function
 """
 function subspace_inference(model, cost, data, opt;
 	σ_z = 1.0,	σ_m = 1.0, σ_p = 1.0,
@@ -53,8 +53,32 @@ function subspace_inference(model, cost, data, opt;
 	return chn, lp, W_swa
 end
 
-#function to calculate norm
 
+"""
+    sub_inference(in_model, data, W_swa, P; σ_z = 1.0, σ_m = 1.0, σ_p = 1.0, itr=100, 
+    M = 3, alg = :rwmh,	backend = :forwarddiff)
+
+To generate the uncertainty in machine learing models using MH Sampler from subspace
+
+# Input Arguments
+- `in_model`	: Machine learning model. Eg: Chain(Dense(10,2)). Model should be created with Chain in Flux
+- `data`		: Inputs and outputs. Eg:	X = rand(10,100); Y = rand(2,100); data = DataLoader(X,Y);
+- `W_swa`		: Mean Weight
+- `P` 			: Projection Matrix
+# Keyword Arguments
+- `σ_z`   		: Standard deviation of subspace
+- `σ_m`   		: Standard deviation of likelihood model
+- `σ_p`   		: Standard deviation of prior
+- `itr`			: Iterations for sampling
+- `M`			: Maximum number of columns in deviation matrix. Eg: M= 3
+- `alg`			: Sampling Algorithm. Eg: :rwmh 
+- `backend`		: Differentiation backend. Eg: :forwarddiff
+
+# Output
+
+- `chn`			: Chain with samples with uncertainty informations
+- `lp`			: Log probabilities of all samples
+"""
 function sub_inference(in_model, data, W_swa, P; σ_z = 1.0,
 	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3, alg = :rwmh,
 	backend = :forwarddiff)
@@ -138,6 +162,39 @@ function sub_inference(in_model, data, W_swa, P; σ_z = 1.0,
 		throw("$alg is not available")
 	end
 end
+
+"""
+    autoencoder_inference(model, cost, data, opt, encoder, decoder;
+	σ_z = 1.0,	σ_m = 1.0, σ_p = 1.0,
+	itr =1000, T=25, c=1, M=20, print_freq=1, alg =:hmc, backend = :forwarddiff)
+	
+To generate the uncertainty in machine learing or neural ODE models using auto-encoders
+
+# Input Arguments
+- `model`		: Machine learning model. Eg: Chain(Dense(10,2)). Model should be created with Chain in Flux
+- `cost`		: Cost function. Eg: L(x, y) = Flux.Losses.mse(m(x), y)
+- `data`		: Inputs and outputs. Eg:	X = rand(10,100); Y = rand(2,100); data = DataLoader(X,Y);
+- `opt`			: Optimzer. Eg: opt = ADAM(0.1)
+- `encoder`	 : Encoder to generate subspace from NN or Neural ODE parameters
+- `decoder`	 : Decoder to generate NN or Neural ODE parameters from subspace
+# Keyword Arguments
+- `callback`  	: Callback function during training. Eg: callback() = @show(L(X,Y))
+- `σ_z`   		: Standard deviation of subspace
+- `σ_m`   		: Standard deviation of likelihood model
+- `σ_p`   		: Standard deviation of prior
+- `itr`			: Iterations for sampling
+- `T`			: Number of steps for subspace calculation. Eg: T= 1
+- `c`			: Moment update frequency. Eg: c = 1
+- `M`			: Maximum number of columns in deviation matrix. Eg: M= 3
+- `alg`			: Sampling Algorithm. Eg: :rwmh 
+- `backend`		: Differentiation backend. Eg: :forwarddiff
+- `print_freq`: Loss printing frequency
+
+# Output
+
+- `chn`			: Chain with samples with uncertainty informations
+- `lp`			: Log probabilities of all samples
+"""
 function autoencoder_inference(model, cost, data, opt, encoder, decoder;
 	σ_z = 1.0,	σ_m = 1.0, σ_p = 1.0,
 	itr =1000, T=25, c=1, M=20, print_freq=1, alg =:hmc, backend = :forwarddiff)
@@ -152,6 +209,32 @@ function autoencoder_inference(model, cost, data, opt, encoder, decoder;
 
 end
 
+"""
+    auto_inference(m, data, decoder, W_swa; σ_z = 1.0,
+	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3, alg = :hmc,
+	backend = :forwarddiff)
+	
+To generate the uncertainty in machine learing or neural ODE models using auto-encoders
+
+# Input Arguments
+- `m`			: Machine learning model. Eg: Chain(Dense(10,2)). Model should be created with Chain in Flux
+- `data`		: Inputs and outputs. Eg:	X = rand(10,100); Y = rand(2,100); data = DataLoader(X,Y);
+- `decoder`	 	: Decoder to generate NN or Neural ODE parameters from subspace
+- `W_swa`		: Mean Weight
+# Keyword Arguments
+- `σ_z`   		: Standard deviation of subspace
+- `σ_m`   		: Standard deviation of likelihood model
+- `σ_p`   		: Standard deviation of prior
+- `itr`			: Iterations for sampling
+- `M`			: Maximum number of columns in deviation matrix. Eg: M= 3
+- `alg`			: Sampling Algorithm. Eg: :rwmh 
+- `backend`		: Differentiation backend. Eg: :forwarddiff
+
+# Output
+
+- `chn`			: Chain with samples with uncertainty informations
+- `lp`			: Log probabilities of all samples
+"""
 function auto_inference(m, data, decoder, W_swa; σ_z = 1.0,
 	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3, alg = :hmc,
 	backend = :forwarddiff)
@@ -234,7 +317,32 @@ function auto_inference(m, data, decoder, W_swa; σ_z = 1.0,
 	end
 end
 
+"""
+    turing_inference(m, data, W_swa, P; σ_z = 1.0,
+	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3, alg = :turing_mh,
+	backend = :forwarddiff)
+	
+To generate the uncertainty in machine learing or neural ODE models using auto-encoders
 
+# Input Arguments
+- `m`			: Machine learning model. Eg: Chain(Dense(10,2)). Model should be created with Chain in Flux
+- `data`		: Inputs and outputs. Eg:	X = rand(10,100); Y = rand(2,100); data = DataLoader(X,Y);
+- `W_swa`		: Mean Weight
+- `P` 			: Projection Matrix
+# Keyword Arguments
+- `σ_z`   		: Standard deviation of subspace
+- `σ_m`   		: Standard deviation of likelihood model
+- `σ_p`   		: Standard deviation of prior
+- `itr`			: Iterations for sampling
+- `M`			: Maximum number of columns in deviation matrix. Eg: M= 3
+- `alg`			: Sampling Algorithm. Eg: :turing_mh 
+- `backend`		: Differentiation backend. Eg: :forwarddiff
+
+# Output
+
+- `chn`			: Chain with samples with uncertainty informations
+- `lp`			: Log probabilities of all samples
+"""
 function turing_inference(m, data, W_swa, P; σ_z = 1.0,
 	σ_m = 1.0, σ_p = 1.0, itr=100, M = 3, alg = :turing_mh,
 	backend = :forwarddiff)

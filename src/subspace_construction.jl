@@ -1,9 +1,7 @@
 
 """
-    subspace_construction(model, cost, data, opt; 
-		callback = ()->(return 0), T = 10, c = 1, M = 3, 
-		LR_init = 0.01, print_freq = 1
-	)
+    subspace_construction(model, cost, data, opt; T = 10, c = 1, M = 3, print_freq = 1)
+
 Izmailov, P., Maddox, W. J., Kirichenko, P., Garipov, T., Vetrov, D., & Wilson, A. G. (2020, August). Subspace inference for Bayesian deep learning. 
 In Uncertainty in Artificial Intelligence (pp. 1169-1179). PMLR.
 
@@ -24,7 +22,6 @@ To construct subspace from pretrained weights.
 # Outputs
 - `W_swa`    : Mean weights
 - `P` 		 : Projection Matrix
-- `re` 		 : Model reconstruction function
 """
 function subspace_construction(model, cost, data, opt; T = 10, c = 1, M = 3, print_freq = 1
 )
@@ -69,6 +66,30 @@ function subspace_construction(model, cost, data, opt; T = 10, c = 1, M = 3, pri
 	return W_swa, P
 end
 
+"""
+	auto_encoder_subspace(model, cost, data, opt, encoder, decoder; T = 10, c = 1, M = 3, print_freq = 1
+)
+
+To construct subspace from pretrained weights using autoencoders.
+
+# Input Arguments
+- `model` 	 : Machine learning model. Eg: Chain(Dense(10,2)). Model should be created with Chain in Flux
+- `cost`  	 : Cost function. Eg: L(x, y) = Flux.Losses.mse(m(x), y)
+- `data` 	 : Inputs and outputs. Eg:	X = rand(10,100); Y = rand(2,100); data = DataLoader(X,Y);
+- `opt`		 : Optimzer. Eg: opt = ADAM(0.1)
+- `encoder`	 : Encoder to generate subspace from NN or Neural ODE parameters
+- `decoder`	 : Decoder to generate NN or Neural ODE parameters from subspace
+
+# Keyword Arguments
+- `T` 		  : Number of steps for subspace calculation. Eg: T= 1
+- `c` 		  : Moment update frequency. Eg: c = 1
+- `M` 		  : Maximum number of columns in deviation matrix. Eg: M= 2
+- `print_freq`: Loss printing frequency
+
+# Outputs
+- `W_swa`    : Mean weights
+- `decoder`  : Trained decoder to generate NN or Neural ODE parameters from subspace
+"""
 function auto_encoder_subspace(model, cost, data, opt, encoder, decoder; T = 10, c = 1, M = 3, print_freq = 1
 )
 	training_loss = 0.0
@@ -120,6 +141,29 @@ function auto_encoder_subspace(model, cost, data, opt, encoder, decoder; T = 10,
 	return W_swa, decoder
 
 end
+
+"""
+    diffusion_subspace(model, cost, data, opt; T = 10, c = 1, M = 3, print_freq = 1)
+
+
+To construct subspace from pretrained weights using diffusion maps.
+
+# Input Arguments
+- `model` 	 : Machine learning model. Eg: Chain(Dense(10,2)). Model should be created with Chain in Flux
+- `cost`  	 : Cost function. Eg: L(x, y) = Flux.Losses.mse(m(x), y)
+- `data` 	 : Inputs and outputs. Eg:	X = rand(10,100); Y = rand(2,100); data = DataLoader(X,Y);
+- `opt`		 : Optimzer. Eg: opt = ADAM(0.1)
+
+# Keyword Arguments
+- `T` 		  : Number of steps for subspace calculation. Eg: T= 1
+- `c` 		  : Moment update frequency. Eg: c = 1
+- `M` 		  : Maximum number of columns in deviation matrix. Eg: M= 2
+- `print_freq`: Loss printing frequency
+
+# Outputs
+- `W_swa`    : Mean weights
+- `P` 		 : Projection Matrix
+"""
 function diffusion_subspace(model, cost, data, opt; T = 10, c = 1, M = 3, print_freq = 1
 )
 	training_loss = 0.0
