@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Neural ODE Example · SubspaceInference.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">SubspaceInference.jl</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../subspace/">Subspace Construction</a></li><li><a class="tocitem" href="../inference/">Inference</a></li><li><a class="tocitem" href="../nn_example/">NN Example</a></li><li class="is-active"><a class="tocitem" href>Neural ODE Example</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Neural ODE Example</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Neural ODE Example</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/efmanu/SubspaceInference.jl/blob/master/docs/src/node_example.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Introduction"><a class="docs-heading-anchor" href="#Introduction">Introduction</a><a id="Introduction-1"></a><a class="docs-heading-anchor-permalink" href="#Introduction" title="Permalink"></a></h1><p><a href="https://papers.nips.cc/paper/2018/hash/69386f6bb1dfed68692a24c8686939b9-Abstract.html">Neural ODE’s</a> are introduced to model a system by combining machine learning and ODE’s together. This method is trying to model ODE representation of a system by using machine learning method instead of </p><p><span>$y = ML(x)$</span> neural ODE&#39;s trying to model as <span>$y^{&#39;} = ML(x)$</span></p><p><a href="https://github.com/SciML/DiffEqFlux.jl">DiffEqFlux.jl</a> package helps to implement Neural ODE&#39;s in Julia.</p><h3 id="Example-of-Neural-ODE"><a class="docs-heading-anchor" href="#Example-of-Neural-ODE">Example of Neural ODE</a><a id="Example-of-Neural-ODE-1"></a><a class="docs-heading-anchor-permalink" href="#Example-of-Neural-ODE" title="Permalink"></a></h3><p>This example is taken from <a href="https://julialang.org/blog/2019/01/fluxdiffeq/">DiffEqFlux.jl Blog</a> and considers Lokta Voltera ODE&#39;s is used for the study and it is represented as:</p><p><span>$x^\prime = \alpha x + \beta x y$</span> <span>$y^\prime = -\delta y + \gamma x y$</span></p><p>This ODE is solved using <a href="https://github.com/SciML/DifferentialEquations.jl">DifferentialEquations.jl</a> package and the result is as shown below:</p><pre><code class="language-julia">using DifferentialEquations
+
+#ODE function
+function lotka_volterra(du,u,p,t)
+  x, y = u
+  α, β, δ, γ = p
+  du[1] = dx = α*x - β*x*y
+  du[2] = dy = -δ*y + γ*x*y
+end
+#intial condition
+u0 = [1.0,1.0]
+#time span
+tspan = (0.0,10.0)
+p = [1.5,1.0,3.0,1.0]
+prob = ODEProblem(lotka_volterra,u0,tspan,p)
+#solving ODE
+sol = solve(prob)
+using Plots
+#plot ODE solution
+plot(sol)</code></pre><p><img src="../assets/lokta.png" alt="Lokta - Volterra ODE solution"/></p><p>Sometimes we won’t have exact knowledge of complete structure of non linear system to model using ODE’s. This case we  use Neural ODE’s to model the non linear system and to solve simply like training of Neural Network.</p><p>Neural ODE is discussed in this example with spiral ODE using <a href="https://github.com/SciML/DiffEqFlux.jl">DiffEqFlux.jl</a> as below:</p><pre><code class="language-julia">using DiffEqFlux
+using Flux
+using Flux: Data.DataLoader, @epochs
+using DifferentialEquations, Plots</code></pre><p>The inital conditions of spiral ODE is set as:</p><pre><code class="language-julia">#intial condition
+u0 = Float32[2.; 0.]
+datasize = 30
+#indipendent variable range
+tspan = (0.0f0,1.5f0)</code></pre><p><a href="https://github.com/SciML/DifferentialEquations.jl">DifferentialEquations.jl</a> package is used to solve the ODE equations and this solution is used as the training data for NeuralODE.</p><pre><code class="language-julia">#ode function
+function trueODEfunc(du,u,p,t)
+    true_A = [-0.1 2.0; -2.0 -0.1]
+    du .= ((u.^3)&#39;true_A)&#39;
+end
+#time span
+t = range(tspan[1],tspan[2],length=datasize)
+prob = ODEProblem(trueODEfunc,u0,tspan)
+#spiral ODE solution
+ode_data = Array(solve(prob,Tsit5(),saveat=t))</code></pre><p>The neural network (NN) for neural ODE is defined with a cubical transformation function and two dense hidden layers. The NN has two inputs and two outputs and this NN is defined as:</p><pre><code class="language-julia">dudt = Chain(x -&gt; x.^3,
+             Dense(2,50,tanh),
+             Dense(50,2))</code></pre><p>The neural ODE is incorporated with NN using <code>NeuralODE()</code> function as below:</p><pre><code class="language-julia">n_ode = NeuralODE(dudt,tspan,Tsit5(),saveat=t,reltol=1e-7,abstol=1e-9)
+ps = Flux.params(n_ode)</code></pre><p>The prediction of ODE solution with randomly initialized network parameter is as shown below:</p><pre><code class="language-julia">pred = n_ode(u0) # Get the prediction using the correct initial condition
+scatter(t,ode_data[1,:],label=&quot;data&quot;)
+scatter!(t,pred[1,:],label=&quot;prediction&quot;)</code></pre><p>Above figure  illustrates the solution of neural ODE without training. <img src="../assets/node_before.png" alt="Neural ODE solution before training"/></p><p>Now we can start training the Neural ODE. The function to predict is defined as:</p><pre><code class="language-julia">#to predict solution from neural ODE
+function predict_n_ode()
+  n_ode(u0)
+end</code></pre><p>The sum squared error is used as the loss function and it is written as:</p><pre><code class="language-julia">loss_n_ode() = sum(abs2,ode_data .- predict_n_ode())</code></pre><p>The solution is repeated 1000 times to make training data as:</p><pre><code class="language-julia">data = Iterators.repeated((), 1000)</code></pre><p>The NN parameter optimization is implemented using <code>ADAM</code> optimizer.</p><pre><code class="language-julia">opt = ADAM(0.1)</code></pre><p>A callback function is defined to print loss during every epoch as:</p><pre><code class="language-julia">cb = function () #callback function to observe training
+  display(loss_n_ode())
+  # plot current prediction against data
+  cur_pred = predict_n_ode()
+  pl = scatter(t,ode_data[1,:],label=&quot;data&quot;)
+  scatter!(pl,t,cur_pred[1,:],label=&quot;prediction&quot;)
+  display(plot(pl))
+end
+# Display the ODE with the initial parameter values.
+cb()</code></pre><p>The neural ODE is trained using <code>Flux.train!()</code> function as:</p><pre><code class="language-julia">Flux.train!(loss_n_ode, ps, data, opt, cb = cb)</code></pre><p>The solution from trained ODE is plotted as:</p><pre><code class="language-julia">pred = n_ode(u0) # Get the prediction using the correct initial condition
+scatter(t,ode_data[1,:],label=&quot;data&quot;)
+scatter!(t,pred[1,:],label=&quot;prediction&quot;)</code></pre><p>It is evident from the above figure that the predicted solution comes closer to actual solution. Therefore, it is a clear indication of proper training.</p><p><img src="../assets/final_node.png" alt="Neural ODE solution after training"/></p><h3 id="Importance-of-subspace-inference-in-Neural-ODE?"><a class="docs-heading-anchor" href="#Importance-of-subspace-inference-in-Neural-ODE?">Importance of subspace inference in Neural ODE?</a><a id="Importance-of-subspace-inference-in-Neural-ODE?-1"></a><a class="docs-heading-anchor-permalink" href="#Importance-of-subspace-inference-in-Neural-ODE?" title="Permalink"></a></h3><p>The training of neural ODE’s provides slightly various parameters at different iterations. So, there will be an uncertainty in the solution using different neural ODE’s. Bayesian inference methods help to identify the uncertainties of the neural ODE parameters by using Markov Chain Monte Carlo (MCMC) or variational Inference (VI) samples. This Bayesian inference methods will be expensive when the number of parameters in the Neural ODE increases. <a href="https://arxiv.org/abs/1907.07504">Subspace Inference</a> method is introduced to reduce time to calculate the uncertainties in neural ODE’s or Neural networks. <a href="https://github.com/efmanu/SubspaceInference.jl">SubspaceInference.jl</a> is a Julia package developed for uncertainty analysis for Neural Networks and Neural ODE’s. This package supports <code>NUTS, RWMH and MALA</code> algorithm based Bayesian inferences.</p><p>The subspace inference analysis using <a href="https://github.com/efmanu/SubspaceInference.jl">SubspaceInference.jl</a> is discussed with spiral ODE. This package can be installed as:</p><h4 id="Install-SubspaceInference-package"><a class="docs-heading-anchor" href="#Install-SubspaceInference-package">Install SubspaceInference package</a><a id="Install-SubspaceInference-package-1"></a><a class="docs-heading-anchor-permalink" href="#Install-SubspaceInference-package" title="Permalink"></a></h4><pre><code class="language-julia">using Pkg
+Pkg.add(&quot;https://github.com/efmanu/SubspaceInference.jl&quot;)</code></pre><p>Before defining the ODE, we have to use some packages for inference</p><pre><code class="language-julia">using BSON: @save, @load;
+using Zygote, SubspaceInference, DifferentialEquations;
+using Flux, DiffEqFlux, PyPlot, Distributions;
+using Flux: Data.DataLoader, @epochs;</code></pre><p>We can define spiral ODE using <a href="https://github.com/SciML/DifferentialEquations.jl">DifferentialEquations.jl</a>. The spiral ODE consists of two dependent variable and the solution of ODE is calculated for independent variable <code>t</code> values from <code>0.0</code> to <code>1.5</code> with <code>datasize=30</code> data points.</p><pre><code class="language-julia">#initial conditions and time span
+len = 100
+
+#intial conditions
+u0 = Array{Float64}(undef,2,len)
+u0 .= [2.; 0.]
+#datasize in solution
+datasize = 30
+tspan = (0.0,1.5)
+
+#ode function
+function trueODEfunc(du,u,p,t)
+    true_A = [-0.1 2.0; -2.0 -0.1]
+    du .= ((u.^3)&#39;true_A)&#39;
+end
+
+#time points
+t = range(tspan[1],tspan[2],length=datasize)</code></pre><p>The ODE is solved to generate the training data. In this example, ODE output variables and the solutions is  for <code>30</code> data points. This solution is converted to a vector and it is used to fill <code>ode_data</code> matrix with <code>len=100</code> columns. This matrix data will added with a noise of <code>Normal(0.0, 0.1)</code> and used to train the neural ODE.</p><pre><code class="language-julia">ode_data = Array{Float64}(undef, 2*datasize, len)
+for i in 1:len
+	prob = ODEProblem(trueODEfunc,u0[:,i],tspan)
+	ode_data[:,i] = reshape(Array(solve(prob,Tsit5(),saveat=t))&#39;, :, 1)
+end
+ode_data_bkp = ode_data
+ode_data += rand(Normal(0.0,0.1), 2*datasize,len);</code></pre><p>The following code is used to plot the ODE solution with noise.</p><pre><code class="language-julia">(fig, f_axes) = PyPlot.subplots(ncols=1, nrows=1)
+for i in 1:len
+	f_axes.scatter(t,vec(ode_data[1:1:datasize,i]), c=&quot;red&quot;, alpha=0.3, marker=&quot;*&quot;, label =&quot;data with noise&quot;)
+end
+f_axes.plot(t,vec(ode_data_bkp[1:1:datasize,1]), c=&quot;red&quot;, marker=&quot;.&quot;, label = &quot;data&quot;)
+fig.show();</code></pre><p>Above figure illustrates  the different solutions for spiral ODE.</p><p><img src="../assets/ode_noise.png" alt="Solution of ODE with noise"/></p><p>The subspace inference methods use pretrained neural ODE and it is set up and trained as below:</p><pre><code class="language-julia">dudt = Chain(x -&gt; x.^3, Dense(2,15,tanh),
+             Dense(15,2))
+n_ode = NeuralODE(dudt,tspan,Tsit5(),saveat=t,
+	reltol=1e-7,abstol=1e-9);
+
+ps = Flux.params(n_ode);
+
+sqnorm(x) = sum(abs2, x)
+L1(x, y) = sum(abs2, n_ode(vec(x)) .- 
+	reshape(y[:,1], :,2)&#39;)+sum(sqnorm, Flux.params(n_ode))/100
+#call back
+cb = function () #callback function to observe training
+  @show L1(u0[:,1], ode_data_bkp[:,1])
+end
+
+#optiizer
+opt = ADAM(0.1);
+
+#format data
+X = u0 #input
+Y =ode_data #output 
+
+data =  DataLoader(X,Y);
+
+@epochs 4 Flux.train!(L1, ps, data, opt);
+cb();</code></pre><p>The solution of ODE with pretrained network is shown in the below figure:</p><pre><code class="language-julia">(fig, f_axes) = PyPlot.subplots(ncols=1, nrows=1)
+pred = n_ode(vec(u0[:,1])) # Get the prediction using the correct initial condition
+f_axes.plot(t,vec(ode_data_bkp[1:datasize,1]), c=&quot;red&quot;, marker=&quot;.&quot;, label = &quot;data&quot;)
+f_axes.plot(t,vec(pred[1,:]), c=&quot;green&quot;, marker=&quot;.&quot;, label =&quot;prediction&quot;)
+f_axes.legend()
+fig.show()</code></pre><p><img src="../assets/n_ode_trained.png" alt="Predicted solution"/></p><h3 id="Subspace-Inference-for-Neural-ODE"><a class="docs-heading-anchor" href="#Subspace-Inference-for-Neural-ODE">Subspace Inference for Neural ODE</a><a id="Subspace-Inference-for-Neural-ODE-1"></a><a class="docs-heading-anchor-permalink" href="#Subspace-Inference-for-Neural-ODE" title="Permalink"></a></h3><p>We have to modify the loss function for subspace construction because this algorithm updates weight parameters every time and calculate the loss.</p><pre><code class="language-julia">L1(m, x, y) = sum(abs2, m(vec(x)) .- reshape(y[:,1], :,2)&#39;)+sum(sqnorm, Flux.params(m))/100;</code></pre><p>The subspace inference is generated for subspace size of <code>3</code> with <code>100</code> iterations as below. This algorithm generates uncertainties using MH algorithm with subspace with proposal distribution of <code>0.1</code>. During inference, the posterior samples of subspace is generated by considering the prior distribution of neural network parameters.</p><pre><code class="language-julia">T = 1
+M = 3
+itr = 100
+σ_z = 0.1 #proposal distribution
+
+#do subspace inference
+chn, lp, W_swa = SubspaceInference.subspace_inference(n_ode, L1, data, opt;
+	σ_z = σ_z, itr =itr, T=T, M=M,  alg =:mh);
+
+ns = length(chn)
+
+trajectories = Array{Float64}(undef,2*datasize,ns)
+for i in 1:ns
+  new_model = SubspaceInference.model_re(n_ode, chn[i])
+  out = new_model(u0[:,1])
+  reshape(Array(out)&#39;,:,1)
+  trajectories[:, i] = reshape(Array(out)&#39;,:,1)
+end
+
+all_trajectories = Dict()
+all_trajectories[1] = trajectories
+title = [&quot;Subspace Size: $M&quot;]
+
+SubspaceInference.plot_node(t, all_trajectories, ode_data_bkp, ode_data, 2, datasize, title)</code></pre><p>The uncertainties in solution is plotted for two variables in the below two figures. The blue color shaded area is corresponds to generated uncertainty information and red shaded area corresponds to the noise in the trained data.</p><p><img src="../assets/inference_var1.png" alt="Uncertainty in var 1 solution"/> <img src="../assets/inference_var2.png" alt="Uncertainty in var 2 solution"/></p><p>The plot of variable 1 against variable 2 for subspace of 3 with 1.0 proposal distribution is Illustrated  in the below figure. </p><p><img src="../assets/var_1_2.png" alt="Variable 1 solution vs variable 2"/></p><p>The below figure discuss the uncertainties in predictions as well as in forecasting.</p><p><img src="../assets/single_plot_forecasting.png" alt="Prediction and Forecasting"/></p><h3 id="Effect-of-different-subspace-sizes-in-neural-ODE-uncertainty-generation"><a class="docs-heading-anchor" href="#Effect-of-different-subspace-sizes-in-neural-ODE-uncertainty-generation">Effect of different subspace sizes in neural ODE uncertainty generation</a><a id="Effect-of-different-subspace-sizes-in-neural-ODE-uncertainty-generation-1"></a><a class="docs-heading-anchor-permalink" href="#Effect-of-different-subspace-sizes-in-neural-ODE-uncertainty-generation" title="Permalink"></a></h3><p>This experiment focuses on the uncertainty outcomes due to different proposal standard deviations, <code>σ_z</code>. This simulation considers proposal deviations of <code>0.1</code> and <code>1.0</code> and following code is used:</p><pre><code class="language-julia">T = 1
+M = [3,5,10,15]
+itr = 100
+σ_z = 0.1
+alg = :hmc
+all_trajectories = Dict()
+for ti in 1:4
+  @load &quot;n_ode_weights_30r.bson&quot; ps;
+  Flux.loadparams!(n_ode, ps);
+
+  #do subspace inference
+  chn, lp, W_swa = SubspaceInference.subspace_inference(n_ode, L1, data, opt;
+    σ_z = σ_z, itr =itr, T=T, M=M[ti],  alg =alg);
+
+  ns = length(chn)
+
+  trajectories = Array{Float64}(undef,2*datasize,ns)
+  for i in 1:ns
+    new_model = SubspaceInference.model_re(n_ode, chn[i])
+    out = new_model(u0[:,1])
+    reshape(Array(out)&#39;,:,1)
+    trajectories[:, i] = reshape(Array(out)&#39;,:,1)
+  end
+  
+  all_trajectories[ti] = trajectories
+end
+title = [&quot;Subspace Size:3&quot;,&quot;Subspace Size:5&quot;,&quot;Subspace Size:10&quot;,&quot;Subspace Size:15&quot;]
+
+SubspaceInference.plot_node(t, all_trajectories, ode_data_bkp, ode_data, 2, datasize, title)</code></pre><p><img src="../assets/nn_uncert_var1_subspace.png" alt="Effect of different proposal standard deviations of variable 1"/> <img src="../assets/nn_uncert_var2_subspace.png" alt="Effect of different proposal standard deviations of variable 2"/></p><p>It is evident from abve figures that the uncertainty information decreases with increase in subspace sizes. Moreover, the current parameters used for the experiment is not enough to cover the complete data uncertainty.</p><h3 id="Effect-of-different-proposal-distributions-in-neural-ODE-uncertainty-generation"><a class="docs-heading-anchor" href="#Effect-of-different-proposal-distributions-in-neural-ODE-uncertainty-generation">Effect of different proposal distributions in neural ODE uncertainty generation</a><a id="Effect-of-different-proposal-distributions-in-neural-ODE-uncertainty-generation-1"></a><a class="docs-heading-anchor-permalink" href="#Effect-of-different-proposal-distributions-in-neural-ODE-uncertainty-generation" title="Permalink"></a></h3><pre><code class="language-julia">T = 1
+M = 5
+itr = 100
+σ_z = [0.1, 1.0]
+alg = :hmc
+all_trajectories = Dict()
+for ti in 1:4
+  @load &quot;n_ode_weights_30r.bson&quot; ps;
+  Flux.loadparams!(n_ode, ps);
+
+  #do subspace inference
+  chn, lp, W_swa = SubspaceInference.subspace_inference(n_ode, L1, data, opt;
+    σ_z = σ_z[ti], itr =itr, T=T, M=M,  alg =alg);
+
+  ns = length(chn)
+
+  trajectories = Array{Float64}(undef,2*datasize,ns)
+  for i in 1:ns
+    new_model = SubspaceInference.model_re(n_ode, chn[i])
+    out = new_model(u0[:,1])
+    reshape(Array(out)&#39;,:,1)
+    trajectories[:, i] = reshape(Array(out)&#39;,:,1)
+  end
+  
+  all_trajectories[ti] = trajectories
+end
+title = [&quot;Std: 0.1&quot;,&quot;Std: 1.0&quot;]
+
+SubspaceInference.plot_node(t, all_trajectories, ode_data_bkp, ode_data, 2, datasize, title)</code></pre><p><img src="../assets/node_diff_std_var1.png" alt="Effect of different proposal standard deviations of variable 1"/> <img src="../assets/node_diff_std_var2.png" alt="Effect of different proposal standard deviations of variable 2"/></p><p>It is noticeable from the above figures that the uncertainty information for proposal standard deviation <code>1.0</code> is too high compared to standard deviation of <code>0.1</code>. </p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../nn_example/">« NN Example</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 16 February 2021 06:22">Tuesday 16 February 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
