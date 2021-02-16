@@ -1,4 +1,5 @@
 # Subspace Inference for Bayesian Deep Learning
+[![][docs-dev-img]][docs-dev-url]
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
 [docs-dev-url]: https://efmanu.github.io/SubspaceInference.jl/dev/
 This package aims to generate the subspace and subspace inferences.
