@@ -42,10 +42,10 @@ The subspace inference uses a pretrained DNN and it is implemented using followi
 #### Algorithm for subspace construction
 The subspace of NN model parameters are constructed by following steps:
 1. Initialize mean parameters to pretrained parameter value, $W_{swa} = W_0$
-2. For every epoch $i$ 
-    2.1 Update parameter using SGD
-    2.2 Update mean parameters as  ``Wswa = (n*W_{swa} + \frac{W_{i}}{n+1})$, where $n = i/f``. ``f`` is the weight update frequency
-    2.3 Calculate parameter deviation, ``W_{d} = W_{i}-W_{swa}``
+2. For every epoch ``i`` 
+    1. Update parameter using SGD
+    2. Update mean parameters as  ``Wswa = (n*W_{swa} + \frac{W_{i}}{n+1})``, where ``n = i/f``. ``f`` is the weight update frequency
+    3. Calculate parameter deviation, ``W_{d} = W_{i}-W_{swa}``
 3. Do principle component analysis
 4. Generate projection matrix
 
@@ -84,7 +84,7 @@ using Flux, Flux: Data.DataLoader, Flux: @epochs
 using BSON: @save, @load
 using Zygote, Statistics, SubspaceInference;
 ```
-The sample data is loaded from `.npy` file found in [python implementation](https://github.com/wjmaddox/drbayes).  This data contains two columns and each columns named as ``x`` and  ``y`` respectively. The ``x`` is converted to features using features function. The feature function returns a matrix ``f`` with two columns. One column will be the ``x/2`` and the other column will be ``(\frac{x}{2})^2``. 
+The sample data is loaded from `.npy` file found in [python implementation](https://github.com/wjmaddox/drbayes).  This data contains two columns and each columns named as ``x`` and  ``y`` respectively. The ``x`` is converted to features using features function. The feature function returns a matrix ``f`` with two columns. One column will be the ``\frac{x}{2}`` and the other column will be ``(\frac{x}{2})^2``. 
 
 ```julia
 data_ld = npzread("data.npy");

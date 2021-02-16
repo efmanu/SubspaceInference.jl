@@ -7,6 +7,7 @@ makedocs(
     sitename = "SubspaceInference.jl",
     doctest = true,
     pages = [
+        "Home" => "index.md",
         "Subspace Construction" => "subspace.md",
         "Inference" => "inference.md",
         "NN Example" => "nn_example.md",
