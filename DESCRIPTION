@@ -1,0 +1,13 @@
+Package: SubspaceInference.jl
+Title: Subspace Inference for Bayesian Deep Learning
+Version: 0.1.0
+Description: A set of functions for Bayesian Inference of Neural Networks and Neural ODE's.
+Depends: Julia (>= 1.6)
+
+Authors@R: person("The", "Team", role = c("aut", "cre"), email = "manuedavakandam@gmail.com")
+License: MIT + file LICENSE
+URL: https://github.com/efmanu/SubspaceInference.jl
+BugReports: https://github.com/efmanu/SubspaceInference.jl/issues
+Encoding: UTF-8
+LazyData: true
+KeepSource: true
